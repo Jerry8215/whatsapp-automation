@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Panel del Asistente · Consultorio Dr. Padilla</title>
+<style>
+/* ============================================================
+   TOKENS
+   ============================================================ */
+:root {
+  --ground:#F1F4F3; --surface:#FFFFFF; --surface-2:#EAEFED; --surface-3:#E1E8E6;
+  --line:#D8E0DD; --line-soft:#E6EBE9;
+  --ink:#0F1A18; --ink-2:#42534E; --ink-3:#788883; --ink-4:#9BA9A5;
+  --accent:#0B6A5F; --accent-hi:#0E8175; --accent-soft:#DFEEEB; --on-accent:#FFFFFF;
+  --critical:#A63A2C; --critical-soft:#F9E8E5;
+  --warn:#8E6314; --warn-soft:#F8F0DD;
+  --good:#256B4E; --good-soft:#E0EFE7;
+  --shadow-s:0 1px 2px rgba(15,26,24,.05);
+  --shadow-m:0 1px 2px rgba(15,26,24,.05), 0 10px 28px -14px rgba(15,26,24,.22);
+  --shadow-l:0 2px 4px rgba(15,26,24,.06), 0 24px 56px -22px rgba(15,26,24,.30);
+  --sans:ui-sans-serif,"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,"Helvetica Neue",sans-serif;
+  --serif:"Iowan Old Style","Palatino Linotype","Book Antiqua",Palatino,Georgia,serif;
+  --mono:ui-monospace,"Cascadia Mono","SF Mono",Consolas,"Liberation Mono",monospace;
+  --r-s:6px; --r-m:9px; --r-l:13px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ground:#0B1113; --surface:#141B1E; --surface-2:#1B2427; --surface-3:#232E31;
+    --line:#2A3639; --line-soft:#212B2E;
+    --ink:#E3EBE8; --ink-2:#A3B2AE; --ink-3:#74837F; --ink-4:#5B6A66;
+    --accent:#45B5A4; --accent-hi:#5AC9B7; --accent-soft:#14322D; --on-accent:#08191A;
+    --critical:#E58374; --critical-soft:#37201C;
+    --warn:#D8A45B; --warn-soft:#332714;
+    --good:#63C096; --good-soft:#173026;
+    --shadow-s:0 1px 2px rgba(0,0,0,.35);
+    --shadow-m:0 1px 2px rgba(0,0,0,.35), 0 10px 28px -14px rgba(0,0,0,.7);
+    --shadow-l:0 2px 4px rgba(0,0,0,.4), 0 24px 56px -22px rgba(0,0,0,.85);
+  }
+}
+:root[data-theme="dark"] {
+  --ground:#0B1113; --surface:#141B1E; --surface-2:#1B2427; --surface-3:#232E31;
+  --line:#2A3639; --line-soft:#212B2E;
+  --ink:#E3EBE8; --ink-2:#A3B2AE; --ink-3:#74837F; --ink-4:#5B6A66;
+  --accent:#45B5A4; --accent-hi:#5AC9B7; --accent-soft:#14322D; --on-accent:#08191A;
+  --critical:#E58374; --critical-soft:#37201C;
+  --warn:#D8A45B; --warn-soft:#332714;
+  --good:#63C096; --good-soft:#173026;
+  --shadow-s:0 1px 2px rgba(0,0,0,.35);
+  --shadow-m:0 1px 2px rgba(0,0,0,.35), 0 10px 28px -14px rgba(0,0,0,.7);
+  --shadow-l:0 2px 4px rgba(0,0,0,.4), 0 24px 56px -22px rgba(0,0,0,.85);
+}
+:root[data-theme="light"] {
+  --ground:#F1F4F3; --surface:#FFFFFF; --surface-2:#EAEFED; --surface-3:#E1E8E6;
+  --line:#D8E0DD; --line-soft:#E6EBE9;
+  --ink:#0F1A18; --ink-2:#42534E; --ink-3:#788883; --ink-4:#9BA9A5;
+  --accent:#0B6A5F; --accent-hi:#0E8175; --accent-soft:#DFEEEB; --on-accent:#FFFFFF;
+  --critical:#A63A2C; --critical-soft:#F9E8E5;
+  --warn:#8E6314; --warn-soft:#F8F0DD;
+  --good:#256B4E; --good-soft:#E0EFE7;
+  --shadow-s:0 1px 2px rgba(15,26,24,.05);
+  --shadow-m:0 1px 2px rgba(15,26,24,.05), 0 10px 28px -14px rgba(15,26,24,.22);
+  --shadow-l:0 2px 4px rgba(15,26,24,.06), 0 24px 56px -22px rgba(15,26,24,.30);
+}
+
+/* ============================================================
+   RESET
+   ============================================================ */
+*,*::before,*::after { box-sizing:border-box; }
+html { -webkit-text-size-adjust:100%; }
+body {
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--sans); font-size:15px; line-height:1.5;
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+}
+button,input,select,textarea { font:inherit; color:inherit; }
+button { cursor:pointer; }
+h1,h2,h3,p,ul { margin:0; }
+ul { list-style:none; padding:0; }
+:focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:3px; }
+@media (prefers-reduced-motion: reduce) { *,*::before,*::after { transition:none!important; animation:none!important; } }
+
+/* ============================================================
+   PAGE CHROME
+   ============================================================ */
+.page { max-width:1400px; margin:0 auto; padding:22px 20px 64px; }
+
+.strip {
+  display:flex; flex-wrap:wrap; align-items:center; gap:12px 18px;
+  padding:12px 16px; margin-bottom:20px;
+  border:1px solid var(--line); border-radius:var(--r-m);
+  background:var(--surface); box-shadow:var(--shadow-s);
+}
+.strip-tag {
+  font-size:10.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase;
+  color:var(--accent); background:var(--accent-soft);
+  padding:4px 9px; border-radius:5px; white-space:nowrap;
+}
+.strip-txt { font-size:13px; color:var(--ink-2); flex:1 1 320px; min-width:0; }
+.theme-btn {
+  border:1px solid var(--line); background:var(--surface-2); color:var(--ink-2);
+  border-radius:20px; padding:6px 14px; font-size:12.5px; font-weight:600;
+  white-space:nowrap; transition:border-color .15s ease, color .15s ease;
+}
+.theme-btn:hover { border-color:var(--ink-3); color:var(--ink); }
+
+/* ============================================================
+   APP SHELL
+   ============================================================ */
+.app {
+  display:grid; grid-template-columns:224px minmax(0,1fr);
+  background:var(--surface); border:1px solid var(--line);
+  border-radius:var(--r-l); box-shadow:var(--shadow-m);
+  overflow:hidden; min-height:760px;
+}
+
+/* ---- rail ---- */
+.rail {
+  background:var(--surface-2); border-right:1px solid var(--line);
+  display:flex; flex-direction:column; padding:16px 12px;
+}
+.brand { display:flex; align-items:center; gap:10px; padding:4px 8px 18px; }
+.mark {
+  width:32px; height:32px; flex:none; border-radius:8px;
+  background:var(--accent); color:var(--on-accent);
+  display:grid; place-items:center; font-family:var(--serif); font-size:17px; line-height:1;
+}
+.brand-name { font-family:var(--serif); font-size:15.5px; line-height:1.2; }
+.brand-sub { font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3); margin-top:2px; }
+
+.nav-label {
+  font-size:10px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-4); padding:0 8px; margin:14px 0 7px;
+}
+.nav { display:flex; flex-direction:column; gap:2px; }
+.nav-item {
+  display:flex; align-items:center; gap:10px; width:100%;
+  padding:8px 10px; border:0; border-radius:var(--r-s);
+  background:transparent; color:var(--ink-2);
+  font-size:13.5px; font-weight:520; text-align:left;
+  transition:background .14s ease, color .14s ease;
+}
+.nav-item:hover { background:var(--surface-3); color:var(--ink); }
+.nav-item[aria-current="true"] { background:var(--surface); color:var(--ink); font-weight:640; box-shadow:var(--shadow-s); }
+.nav-ico { width:16px; flex:none; display:grid; place-items:center; opacity:.85; }
+.nav-ico svg { display:block; }
+.nav-badge {
+  margin-left:auto; font-size:11px; font-weight:700; font-variant-numeric:tabular-nums;
+  min-width:19px; text-align:center; padding:1px 6px; border-radius:20px;
+  background:var(--critical); color:#fff;
+}
+:root[data-theme="dark"] .nav-badge { color:#2A100C; }
+@media (prefers-color-scheme: dark) { .nav-badge { color:#2A100C; } }
+:root[data-theme="light"] .nav-badge { color:#fff; }
+
+.rail-foot { margin-top:auto; padding-top:16px; border-top:1px solid var(--line); }
+.user { display:flex; align-items:center; gap:9px; padding:6px 8px; }
+.avatar {
+  width:28px; height:28px; flex:none; border-radius:50%;
+  background:var(--accent-soft); color:var(--accent);
+  display:grid; place-items:center; font-size:11px; font-weight:700;
+}
+.user-n { font-size:13px; font-weight:600; line-height:1.25; }
+.user-r { font-size:11px; color:var(--ink-3); }
+
+/* ---- main ---- */
+.main { min-width:0; display:flex; flex-direction:column; }
+.viewbar {
+  display:flex; flex-wrap:wrap; align-items:center; gap:12px;
+  padding:16px 22px; border-bottom:1px solid var(--line);
+}
+.view-title { font-family:var(--serif); font-size:20px; letter-spacing:.005em; line-height:1.2; }
+.view-sub { font-size:12.5px; color:var(--ink-3); margin-top:2px; }
+.viewbar-r { margin-left:auto; display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+
+.select {
+  appearance:none; font-size:13px; color:var(--ink-2);
+  background:var(--surface-2); border:1px solid var(--line);
+  border-radius:var(--r-s); padding:7px 30px 7px 11px;
+  background-image:linear-gradient(45deg,transparent 50%,var(--ink-3) 50%),linear-gradient(135deg,var(--ink-3) 50%,transparent 50%);
+  background-position:calc(100% - 16px) calc(50% + 1px), calc(100% - 11px) calc(50% + 1px);
+  background-size:5px 5px,5px 5px; background-repeat:no-repeat;
+}
+.live { display:flex; align-items:center; gap:7px; font-size:12px; color:var(--ink-3); }
+.dot { width:7px; height:7px; border-radius:50%; background:var(--good); box-shadow:0 0 0 3px var(--good-soft); }
+
+.view { display:none; flex:1; min-height:0; }
+.view.on { display:flex; flex-direction:column; }
+
+/* ============================================================
+   INICIO
+   ============================================================ */
+.scroll { overflow-y:auto; padding:20px 22px 26px; }
+
+.kpis { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:10px; margin-bottom:18px; }
+.kpi {
+  background:var(--surface-2); border:1px solid var(--line-soft);
+  border-radius:var(--r-m); padding:13px 14px 15px;
+  display:flex; flex-direction:column; gap:2px;
+  transition:border-color .15s ease;
+}
+.kpi:hover { border-color:var(--line); }
+.kpi.flag { background:var(--critical-soft); border-color:transparent; }
+.kpi-l { font-size:10.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-3); }
+.kpi.flag .kpi-l { color:var(--critical); opacity:.9; }
+.kpi-v { font-size:28px; font-weight:640; letter-spacing:-.025em; line-height:1.1; font-variant-numeric:tabular-nums; }
+.kpi.flag .kpi-v { color:var(--critical); }
+.kpi-v.good { color:var(--good); }
+.kpi-f { font-size:11.5px; color:var(--ink-3); font-variant-numeric:tabular-nums; }
+.kpi.flag .kpi-f { color:var(--critical); opacity:.85; }
+.up { color:var(--good); font-weight:600; }
+.down { color:var(--critical); font-weight:600; }
+
+.grid2 { display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr); gap:14px; }
+.card {
+  background:var(--surface-2); border:1px solid var(--line-soft);
+  border-radius:var(--r-m); padding:16px 18px 18px;
+}
+.card-head { display:flex; align-items:baseline; gap:10px; margin-bottom:14px; }
+.card-t { font-size:11.5px; letter-spacing:.08em; text-transform:uppercase; font-weight:680; color:var(--ink-2); }
+.card-note { font-size:12px; color:var(--ink-3); margin-left:auto; }
+
+/* chart */
+.chart { display:flex; align-items:flex-end; gap:10px; height:132px; padding-top:6px; }
+.chart-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:7px; min-width:0; }
+.chart-stack { width:100%; display:flex; flex-direction:column; justify-content:flex-end; height:104px; gap:2px; }
+.bar-b { border-radius:3px 3px 0 0; background:var(--accent); }
+.bar-a { border-radius:3px; background:var(--surface-3); }
+.chart-col.now .bar-b { background:var(--accent-hi); }
+.chart-x { font-size:10.5px; color:var(--ink-3); letter-spacing:.04em; text-transform:uppercase; }
+.chart-col.now .chart-x { color:var(--ink); font-weight:650; }
+.legend { display:flex; gap:16px; margin-top:14px; padding-top:12px; border-top:1px solid var(--line-soft); font-size:12px; color:var(--ink-3); }
+.legend i { width:9px; height:9px; border-radius:2px; display:inline-block; margin-right:6px; vertical-align:middle; }
+
+/* bars */
+.bars { display:flex; flex-direction:column; gap:11px; }
+.bar-row { display:grid; grid-template-columns:96px minmax(0,1fr) 34px; gap:10px; align-items:center; }
+.bar-l { font-size:12.5px; color:var(--ink-2); }
+.track { height:7px; border-radius:4px; background:var(--surface-3); overflow:hidden; }
+.fill { display:block; height:100%; border-radius:4px; background:var(--accent); }
+.bar-v { font-size:12px; color:var(--ink-2); text-align:right; font-variant-numeric:tabular-nums; }
+
+.rowlist { display:flex; flex-direction:column; }
+.li { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--line-soft); font-size:13.5px; }
+.li:last-child { border-bottom:0; }
+.li-n { margin-left:auto; font-variant-numeric:tabular-nums; font-weight:660; }
+.li-s { color:var(--ink-2); }
+.li-time { font-family:var(--mono); font-size:12px; color:var(--ink-3); }
+
+/* ============================================================
+   CONVERSACIONES — master / detail
+   ============================================================ */
+.md { display:grid; grid-template-columns:308px minmax(0,1fr) 262px; flex:1; min-height:0; }
+.list { border-right:1px solid var(--line); display:flex; flex-direction:column; min-width:0; }
+.list-tabs { display:flex; gap:4px; padding:12px 12px 10px; border-bottom:1px solid var(--line-soft); }
+.tab {
+  border:0; background:transparent; color:var(--ink-3);
+  font-size:12.5px; font-weight:600; padding:5px 10px; border-radius:20px;
+  transition:background .14s ease,color .14s ease;
+}
+.tab:hover { color:var(--ink); background:var(--surface-2); }
+.tab[aria-selected="true"] { background:var(--accent-soft); color:var(--accent); }
+.tab .n { font-variant-numeric:tabular-nums; opacity:.7; margin-left:3px; }
+
+.items { overflow-y:auto; padding:8px; display:flex; flex-direction:column; gap:5px; flex:1; }
+.item {
+  display:grid; grid-template-columns:3px minmax(0,1fr); gap:0 11px;
+  width:100%; text-align:left; border:1px solid transparent; background:transparent;
+  border-radius:var(--r-m); overflow:hidden; padding:0;
+  transition:background .14s ease, border-color .14s ease;
+}
+.item:hover { background:var(--surface-2); }
+.item[aria-selected="true"] { background:var(--surface-2); border-color:var(--line); }
+.stripe { align-self:stretch; background:var(--ink-4); }
+.sev-critical .stripe { background:var(--critical); }
+.sev-warn .stripe { background:var(--warn); }
+.sev-active .stripe { background:var(--accent); }
+.sev-done .stripe { background:var(--good); }
+.item-b { padding:10px 11px 11px 0; min-width:0; }
+.item-top { display:flex; align-items:baseline; gap:8px; }
+.item-n { font-size:13.5px; font-weight:640; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.item-t { margin-left:auto; font-size:11px; color:var(--ink-3); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.item-m { font-size:12.5px; color:var(--ink-2); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.item-f { margin-top:7px; }
+
+.pill {
+  display:inline-block; font-size:10px; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
+  padding:3px 7px; border-radius:4px; white-space:nowrap;
+  background:var(--surface-3); color:var(--ink-2);
+}
+.pill.critical { background:var(--critical-soft); color:var(--critical); }
+.pill.warn { background:var(--warn-soft); color:var(--warn); }
+.pill.active { background:var(--accent-soft); color:var(--accent); }
+.pill.good { background:var(--good-soft); color:var(--good); }
+
+/* thread */
+.thread { display:flex; flex-direction:column; min-width:0; background:var(--ground); }
+.th-head {
+  display:flex; flex-wrap:wrap; align-items:center; gap:10px;
+  padding:13px 18px; background:var(--surface); border-bottom:1px solid var(--line);
+}
+.th-name { font-size:15px; font-weight:660; }
+.th-meta { font-size:12px; color:var(--ink-3); }
+.th-actions { margin-left:auto; display:flex; gap:8px; }
+
+.btn {
+  font-size:12.5px; font-weight:620; padding:7px 14px; border-radius:var(--r-s);
+  border:1px solid var(--line); background:var(--surface); color:var(--ink); white-space:nowrap;
+  transition:border-color .15s ease, background .15s ease, filter .15s ease;
+}
+.btn:hover { border-color:var(--ink-3); }
+.btn.primary { background:var(--accent); border-color:var(--accent); color:var(--on-accent); }
+.btn.primary:hover { background:var(--accent-hi); border-color:var(--accent-hi); }
+.btn.ghost { background:transparent; }
+.btn[disabled] { opacity:.45; cursor:not-allowed; }
+
+.msgs { flex:1; overflow-y:auto; padding:20px 18px; display:flex; flex-direction:column; gap:11px; }
+.msg { max-width:min(560px,78%); }
+.msg-b {
+  padding:10px 13px; border-radius:12px; font-size:14px; line-height:1.5;
+  box-shadow:var(--shadow-s);
+}
+.msg-t { font-size:10.5px; color:var(--ink-3); margin-top:4px; font-variant-numeric:tabular-nums; letter-spacing:.02em; }
+
+.msg.pac { align-self:flex-start; }
+.msg.pac .msg-b { background:var(--surface); border:1px solid var(--line); border-bottom-left-radius:4px; }
+
+.msg.bot { align-self:flex-end; }
+.msg.bot .msg-b { background:var(--accent-soft); border:1px solid transparent; border-bottom-right-radius:4px; }
+.msg.bot .msg-t { text-align:right; }
+
+.msg.hum { align-self:flex-end; }
+.msg.hum .msg-b { background:var(--surface-3); border:1px solid var(--line); border-bottom-right-radius:4px; }
+.msg.hum .msg-t { text-align:right; }
+
+.who-tag {
+  display:inline-block; font-size:9.5px; font-weight:700; letter-spacing:.07em; text-transform:uppercase;
+  color:var(--ink-3); margin-bottom:4px;
+}
+.msg.bot .who-tag { color:var(--accent); text-align:right; display:block; }
+.msg.hum .who-tag { text-align:right; display:block; }
+
+.sysline { align-self:center; max-width:88%; text-align:center; }
+.sysline span {
+  display:inline-block; font-size:11.5px; color:var(--warn);
+  background:var(--warn-soft); padding:5px 12px; border-radius:20px; line-height:1.4;
+}
+.sysline.alert span { color:var(--critical); background:var(--critical-soft); }
+
+.composer { border-top:1px solid var(--line); background:var(--surface); padding:12px 16px 14px; }
+.comp-note {
+  display:flex; align-items:center; gap:9px; font-size:12.5px; color:var(--ink-2);
+  background:var(--surface-2); border:1px dashed var(--line);
+  border-radius:var(--r-s); padding:9px 12px; margin-bottom:10px;
+}
+.comp-note.taken { background:var(--good-soft); border-style:solid; border-color:transparent; color:var(--good); }
+.comp-row { display:flex; gap:9px; align-items:flex-end; }
+.comp-in {
+  flex:1; min-width:0; resize:none; font-size:14px; line-height:1.45;
+  border:1px solid var(--line); border-radius:var(--r-s); background:var(--surface-2);
+  padding:10px 12px; height:44px;
+}
+.comp-in::placeholder { color:var(--ink-4); }
+.comp-in:disabled { opacity:.55; }
+
+/* patient card */
+.pcard { border-left:1px solid var(--line); overflow-y:auto; padding:16px 16px 22px; background:var(--surface); }
+.pc-sec { margin-bottom:20px; }
+.pc-t { font-size:10.5px; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-3); margin-bottom:9px; }
+.pc-row { display:flex; gap:10px; align-items:baseline; padding:5px 0; font-size:13px; }
+.pc-k { color:var(--ink-3); flex:none; width:78px; }
+.pc-v { color:var(--ink); min-width:0; }
+.pc-quote {
+  font-size:13px; line-height:1.5; color:var(--ink-2);
+  background:var(--surface-2); border-left:2px solid var(--accent);
+  padding:10px 12px; border-radius:0 var(--r-s) var(--r-s) 0;
+}
+.pc-hist { display:flex; flex-direction:column; gap:8px; }
+.pc-h {
+  display:flex; gap:9px; align-items:baseline; font-size:12.5px;
+  padding-bottom:8px; border-bottom:1px solid var(--line-soft);
+}
+.pc-h:last-child { border-bottom:0; padding-bottom:0; }
+.pc-h b { font-weight:620; }
+.pc-h time { font-family:var(--mono); font-size:11.5px; color:var(--ink-3); margin-left:auto; white-space:nowrap; }
+
+/* ============================================================
+   CONFIGURACIÓN
+   ============================================================ */
+.cfg { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; }
+.modes { display:flex; gap:6px; margin-bottom:15px; }
+.mode {
+  flex:1; text-align:center; font-size:12.5px; font-weight:620; padding:9px 4px;
+  border:1px solid var(--line); border-radius:var(--r-s);
+  background:var(--surface); color:var(--ink-3);
+  transition:background .15s ease,color .15s ease,border-color .15s ease;
+}
+.mode:hover { color:var(--ink); }
+.mode[aria-pressed="true"] { background:var(--accent); border-color:var(--accent); color:var(--on-accent); }
+.mode-desc { font-size:12.5px; color:var(--ink-2); line-height:1.5; min-height:54px; }
+
+.spend { display:flex; justify-content:space-between; align-items:baseline; font-size:13px; color:var(--ink-2); margin:16px 0 7px; }
+.spend b { color:var(--ink); font-weight:660; font-family:var(--mono); font-size:13.5px; }
+.meter { height:8px; border-radius:4px; background:var(--surface-3); overflow:hidden; }
+.meter > span { display:block; height:100%; border-radius:4px; background:var(--accent); transition:width .3s ease; }
+.hint { font-size:12px; color:var(--ink-3); margin-top:10px; line-height:1.5; }
+
+.sedes { display:flex; flex-direction:column; gap:8px; }
+.sede { display:flex; align-items:center; gap:11px; padding:11px 12px; border-radius:var(--r-s); background:var(--surface); border:1px solid var(--line-soft); }
+.sede-t { min-width:0; margin-right:auto; }
+.sede-n { font-size:13.5px; font-weight:620; }
+.sede-s { font-size:12px; color:var(--ink-3); }
+.toggle { width:40px; height:22px; flex:none; border-radius:20px; border:0; padding:0; background:var(--line); position:relative; transition:background .18s ease; }
+.toggle::after { content:""; position:absolute; top:2.5px; left:2.5px; width:17px; height:17px; border-radius:50%; background:var(--surface); box-shadow:var(--shadow-s); transition:transform .18s ease; }
+.toggle[aria-pressed="true"] { background:var(--accent); }
+.toggle[aria-pressed="true"]::after { transform:translateX(18px); }
+
+.rules { display:flex; flex-direction:column; gap:9px; }
+.rule { display:flex; gap:10px; align-items:flex-start; font-size:13px; color:var(--ink-2); line-height:1.45; }
+.rule::before { content:""; width:5px; height:5px; border-radius:50%; background:var(--accent); flex:none; margin-top:7px; }
+.rule.no::before { background:var(--critical); }
+
+/* ============================================================
+   REQUIREMENTS
+   ============================================================ */
+.after { margin-top:40px; }
+.after-h { margin-bottom:16px; }
+.after-t { font-family:var(--serif); font-size:21px; text-wrap:balance; }
+.after-s { font-size:14px; color:var(--ink-2); margin-top:5px; max-width:66ch; }
+.reqs { display:grid; grid-template-columns:repeat(auto-fit,minmax(228px,1fr)); gap:12px; }
+.req { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-m); padding:15px 17px 17px; }
+.req-h { font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-3); margin-bottom:6px; }
+.req-b { font-size:13.5px; line-height:1.5; color:var(--ink-2); }
+.req-b b { color:var(--ink); font-weight:640; }
+.foot { margin-top:32px; padding-top:16px; border-top:1px solid var(--line); font-size:12.5px; color:var(--ink-3); max-width:78ch; line-height:1.55; }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width:1180px) {
+  .md { grid-template-columns:280px minmax(0,1fr); }
+  .pcard { display:none; }
+  .kpis { grid-template-columns:repeat(3,minmax(0,1fr)); }
+}
+@media (max-width:900px) {
+  .app { grid-template-columns:minmax(0,1fr); min-height:0; }
+  .rail { flex-direction:row; align-items:center; flex-wrap:wrap; gap:10px; border-right:0; border-bottom:1px solid var(--line); padding:12px; }
+  .brand { padding:0 8px 0 0; }
+  .nav-label, .rail-foot { display:none; }
+  .nav { flex-direction:row; flex-wrap:wrap; gap:4px; }
+  .grid2 { grid-template-columns:minmax(0,1fr); }
+  .md { grid-template-columns:minmax(0,1fr); }
+  .list { border-right:0; border-bottom:1px solid var(--line); max-height:340px; }
+  .msg { max-width:88%; }
+}
+@media (max-width:560px) {
+  .page { padding:14px 12px 48px; }
+  .kpis { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .scroll { padding:14px; }
+  .viewbar { padding:13px 14px; }
+  .th-head { padding:11px 13px; }
+  .msgs { padding:14px 13px; }
+  .composer { padding:10px 13px 12px; }
+}
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- notice + theme -->
+  <div class="strip">
+    <span class="strip-tag">Maqueta interactiva</span>
+    <p class="strip-txt">Puede navegar entre las secciones y abrir cualquier conversación. Los pacientes, mensajes y cifras son ficticios, creados solo para ilustrar el funcionamiento.</p>
+    <button class="theme-btn" id="themeBtn" type="button">Modo oscuro</button>
+  </div>
+
+  <!-- ========================= APP ========================= -->
+  <div class="app">
+
+    <!-- rail -->
+    <nav class="rail">
+      <div class="brand">
+        <div class="mark">P</div>
+        <div>
+          <div class="brand-name">Dr. J. G. Padilla</div>
+          <div class="brand-sub">Cirugía general</div>
+        </div>
+      </div>
+
+      <div class="nav-label">Operación</div>
+      <div class="nav" role="tablist">
+        <button class="nav-item" role="tab" data-view="inicio" aria-current="true" type="button">
+          <span class="nav-ico"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6.5 8 2l6 4.5V13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z"/><path d="M6.2 14V9.2h3.6V14"/></svg></span>
+          Resumen del día
+        </button>
+        <button class="nav-item" role="tab" data-view="chats" type="button">
+          <span class="nav-ico"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9.5a1.8 1.8 0 0 1-1.8 1.8H5.4L2 14V3.8A1.8 1.8 0 0 1 3.8 2h8.4A1.8 1.8 0 0 1 14 3.8z"/></svg></span>
+          Conversaciones
+          <span class="nav-badge">3</span>
+        </button>
+        <button class="nav-item" role="tab" data-view="config" type="button">
+          <span class="nav-ico"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.1"/><path d="M12.9 9.8a1.1 1.1 0 0 0 .22 1.21l.04.04a1.33 1.33 0 1 1-1.88 1.88l-.04-.04a1.1 1.1 0 0 0-1.21-.22 1.1 1.1 0 0 0-.67 1v.11a1.33 1.33 0 1 1-2.66 0v-.06a1.1 1.1 0 0 0-.72-1 1.1 1.1 0 0 0-1.21.22l-.04.04a1.33 1.33 0 1 1-1.88-1.88l.04-.04a1.1 1.1 0 0 0 .22-1.21 1.1 1.1 0 0 0-1-.67h-.11a1.33 1.33 0 1 1 0-2.66h.06a1.1 1.1 0 0 0 1-.72 1.1 1.1 0 0 0-.22-1.21l-.04-.04a1.33 1.33 0 1 1 1.88-1.88l.04.04a1.1 1.1 0 0 0 1.21.22h.05a1.1 1.1 0 0 0 .67-1v-.11a1.33 1.33 0 1 1 2.66 0v.06a1.1 1.1 0 0 0 .67 1 1.1 1.1 0 0 0 1.21-.22l.04-.04a1.33 1.33 0 1 1 1.88 1.88l-.04.04a1.1 1.1 0 0 0-.22 1.21v.05a1.1 1.1 0 0 0 1 .67h.11a1.33 1.33 0 1 1 0 2.66h-.06a1.1 1.1 0 0 0-1 .67"/></svg></span>
+          Configuración
+        </button>
+      </div>
+
+      <div class="rail-foot">
+        <div class="user">
+          <span class="avatar">LM</span>
+          <div>
+            <div class="user-n">Lucía Márquez</div>
+            <div class="user-r">Asistente</div>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- main -->
+    <div class="main">
+
+      <!-- ---------- VIEW: INICIO ---------- -->
+      <section class="view on" id="v-inicio">
+        <div class="viewbar">
+          <div>
+            <h1 class="view-title">Resumen del día</h1>
+            <div class="view-sub">Martes 5 de agosto · actualizado hace unos segundos</div>
+          </div>
+          <div class="viewbar-r">
+            <span class="live"><span class="dot"></span> En línea</span>
+            <select class="select" aria-label="Sede"><option>Todas las sedes</option><option>Torre Médica Providencia</option><option>Hospital Puerta de Hierro</option></select>
+            <select class="select" aria-label="Periodo"><option>Hoy</option><option>Últimos 7 días</option><option>Este mes</option></select>
+          </div>
+        </div>
+
+        <div class="scroll">
+          <div class="kpis">
+            <div class="kpi flag">
+              <div class="kpi-l">Requieren atención</div>
+              <div class="kpi-v">3</div>
+              <div class="kpi-f">La más antigua: 24 min</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi-l">Conversaciones</div>
+              <div class="kpi-v">34</div>
+              <div class="kpi-f"><span class="up">▲ 6</span> vs. ayer</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi-l">Citas agendadas</div>
+              <div class="kpi-v good">7</div>
+              <div class="kpi-f">5 nuevas · 2 control</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi-l">Conversión</div>
+              <div class="kpi-v">38%</div>
+              <div class="kpi-f"><span class="up">▲ 4 pts</span> vs. semana pasada</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi-l">Respuesta promedio</div>
+              <div class="kpi-v">2.4 s</div>
+              <div class="kpi-f">Objetivo: menos de 5 s</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi-l">Sin intervención</div>
+              <div class="kpi-v">88%</div>
+              <div class="kpi-f">30 de 34 conversaciones</div>
+            </div>
+          </div>
+
+          <div class="grid2">
+            <div class="card">
+              <div class="card-head">
+                <span class="card-t">Conversaciones y citas · últimos 7 días</span>
+                <span class="card-note">Conversión promedio 35%</span>
+              </div>
+              <div class="chart">
+                <div class="chart-col"><div class="chart-stack"><div class="bar-b" style="height:16px"></div><div class="bar-a" style="height:48px"></div></div><div class="chart-x">Mié</div></div>
+                <div class="chart-col"><div class="chart-stack"><div class="bar-b" style="height:22px"></div><div class="bar-a" style="height:56px"></div></div><div class="chart-x">Jue</div></div>
+                <div class="chart-col"><div class="chart-stack"><div class="bar-b" style="height:19px"></div><div class="bar-a" style="height:41px"></div></div><div class="chart-x">Vie</div></div>
+                <div class="chart-col"><div class="chart-stack"><div class="bar-b" style="height:10px"></div><div class="bar-a" style="height:24px"></div></div><div class="chart-x">Sáb</div></div>
+                <div class="chart-col"><div class="chart-stack"><div class="bar-b" style="height:6px"></div><div class="bar-a" style="height:15px"></div></div><div class="chart-x">Dom</div></div>
+                <div class="chart-col"><div class="chart-stack"><div class="bar-b" style="height:20px"></div><div class="bar-a" style="height:52px"></div></div><div class="chart-x">Lun</div></div>
+                <div class="chart-col now"><div class="chart-stack"><div class="bar-b" style="height:26px"></div><div class="bar-a" style="height:60px"></div></div><div class="chart-x">Hoy</div></div>
+              </div>
+              <div class="legend">
+                <span><i style="background:var(--accent)"></i>Citas agendadas</span>
+                <span><i style="background:var(--surface-3)"></i>Conversaciones</span>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-head"><span class="card-t">Cómo llegaron los pacientes</span></div>
+              <div class="bars">
+                <div class="bar-row"><span class="bar-l">Doctoralia</span><span class="track"><span class="fill" style="width:100%"></span></span><span class="bar-v">34%</span></div>
+                <div class="bar-row"><span class="bar-l">Google</span><span class="track"><span class="fill" style="width:76%"></span></span><span class="bar-v">26%</span></div>
+                <div class="bar-row"><span class="bar-l">Recomendación</span><span class="track"><span class="fill" style="width:62%"></span></span><span class="bar-v">21%</span></div>
+                <div class="bar-row"><span class="bar-l">Facebook</span><span class="track"><span class="fill" style="width:35%"></span></span><span class="bar-v">12%</span></div>
+                <div class="bar-row"><span class="bar-l">Sitio web</span><span class="track"><span class="fill" style="width:21%"></span></span><span class="bar-v">7%</span></div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-head"><span class="card-t">Próximas citas</span><span class="card-note">Hoy y mañana</span></div>
+              <div class="rowlist">
+                <div class="li"><span class="li-time">16:00</span><span class="li-s">Luis Ramírez · control postoperatorio</span><span class="pill good">Confirmada</span></div>
+                <div class="li"><span class="li-time">17:30</span><span class="li-s">Sofía Delgado · primera valoración</span><span class="pill good">Confirmada</span></div>
+                <div class="li"><span class="li-time">18:15</span><span class="li-s">Ernesto Vidal · primera valoración</span><span class="pill warn">Sin confirmar</span></div>
+                <div class="li"><span class="li-time">09:00</span><span class="li-s">Patricia Nava · control · mañana</span><span class="pill good">Confirmada</span></div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-head"><span class="card-t">Por qué se perdieron</span><span class="card-note">12 este mes</span></div>
+              <div class="rowlist">
+                <div class="li"><span class="li-s">Dejó de responder</span><span class="li-n">6</span></div>
+                <div class="li"><span class="li-s">El precio le pareció alto</span><span class="li-n">4</span></div>
+                <div class="li"><span class="li-s">Buscaba otra especialidad</span><span class="li-n">2</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- VIEW: CHATS ---------- -->
+      <section class="view" id="v-chats">
+        <div class="viewbar">
+          <div>
+            <h1 class="view-title">Conversaciones</h1>
+            <div class="view-sub">3 esperando a una persona · 5 atendidas por el asistente</div>
+          </div>
+          <div class="viewbar-r">
+            <span class="live"><span class="dot"></span> Recibiendo mensajes</span>
+          </div>
+        </div>
+
+        <div class="md">
+          <!-- list -->
+          <div class="list">
+            <div class="list-tabs" role="tablist">
+              <button class="tab" role="tab" aria-selected="true" data-filter="all" type="button">Todas <span class="n">8</span></button>
+              <button class="tab" role="tab" aria-selected="false" data-filter="attn" type="button">Requieren atención <span class="n">3</span></button>
+              <button class="tab" role="tab" aria-selected="false" data-filter="bot" type="button">Asistente <span class="n">5</span></button>
+            </div>
+            <div class="items" id="items"></div>
+          </div>
+
+          <!-- thread -->
+          <div class="thread">
+            <div class="th-head">
+              <div>
+                <div class="th-name" id="thName">Ana López</div>
+                <div class="th-meta" id="thMeta">+52 33 1428 9077 · Torre Médica Providencia</div>
+              </div>
+              <div class="th-actions">
+                <button class="btn ghost" type="button">Ver ficha</button>
+                <button class="btn primary" id="takeBtn" type="button">Tomar control</button>
+              </div>
+            </div>
+            <div class="msgs" id="msgs"></div>
+            <div class="composer">
+              <div class="comp-note" id="compNote">
+                <span>El asistente está atendiendo esta conversación. Tome el control para responder usted.</span>
+              </div>
+              <div class="comp-row">
+                <textarea class="comp-in" id="compIn" placeholder="Tome el control para escribir…" disabled></textarea>
+                <button class="btn primary" id="sendBtn" type="button" disabled>Enviar</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- patient card -->
+          <aside class="pcard" id="pcard"></aside>
+        </div>
+      </section>
+
+      <!-- ---------- VIEW: CONFIG ---------- -->
+      <section class="view" id="v-config">
+        <div class="viewbar">
+          <div>
+            <h1 class="view-title">Configuración</h1>
+            <div class="view-sub">Todo se cambia desde aquí, sin depender del desarrollador</div>
+          </div>
+        </div>
+
+        <div class="scroll">
+          <div class="cfg">
+
+            <div class="card">
+              <div class="card-head"><span class="card-t">Modo del asistente</span></div>
+              <div class="modes" id="modes">
+                <button class="mode" data-mode="basico" aria-pressed="false" type="button">Básico</button>
+                <button class="mode" data-mode="hibrido" aria-pressed="true" type="button">Híbrido</button>
+                <button class="mode" data-mode="ia" aria-pressed="false" type="button">IA completa</button>
+              </div>
+              <p class="mode-desc" id="modeDesc">Las consultas comunes las resuelven los flujos, sin costo. La inteligencia artificial entra solo cuando el paciente pregunta algo fuera de lo previsto.</p>
+              <div class="spend"><span>Consumo de IA este mes</span><span><b id="spendV">$2.40</b> <span style="color:var(--ink-3)">/ $15.00</span></span></div>
+              <div class="meter"><span id="spendBar" style="width:16%"></span></div>
+              <p class="hint">Al alcanzar el límite, el asistente pasa solo a modo básico y le enviamos un aviso. Nunca hay cargos sorpresa.</p>
+            </div>
+
+            <div class="card">
+              <div class="card-head"><span class="card-t">Sedes</span><span class="card-note">Solo se ofrecen las activas</span></div>
+              <div class="sedes">
+                <div class="sede">
+                  <div class="sede-t"><div class="sede-n">Torre Médica Providencia</div><div class="sede-s">Lun, mié y vie · 9:00 a 14:00</div></div>
+                  <button class="toggle" aria-pressed="true" type="button" aria-label="Torre Médica Providencia"></button>
+                </div>
+                <div class="sede">
+                  <div class="sede-t"><div class="sede-n">Hospital Puerta de Hierro</div><div class="sede-s">Mar y jue · 16:00 a 20:00</div></div>
+                  <button class="toggle" aria-pressed="true" type="button" aria-label="Hospital Puerta de Hierro"></button>
+                </div>
+                <div class="sede">
+                  <div class="sede-t"><div class="sede-n">Clínica Chapalita</div><div class="sede-s">Aún sin publicar</div></div>
+                  <button class="toggle" aria-pressed="false" type="button" aria-label="Clínica Chapalita"></button>
+                </div>
+              </div>
+              <p class="hint">Las citas ya agendadas en una sede desactivada se conservan y sus recordatorios siguen saliendo con la dirección correcta.</p>
+            </div>
+
+            <div class="card">
+              <div class="card-head"><span class="card-t">Cuándo pasa a una persona</span></div>
+              <div class="rules">
+                <p class="rule">El paciente describe una posible urgencia</p>
+                <p class="rule">Pide hablar directamente con el doctor</p>
+                <p class="rule">Se detecta molestia o reclamo</p>
+                <p class="rule">Repite la misma pregunta sin obtener respuesta</p>
+                <p class="rule">Menciona síntomas o envía fotografías</p>
+                <p class="rule">La conversación lleva más de 10 minutos sin avanzar</p>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-head"><span class="card-t">Lo que el asistente nunca hace</span></div>
+              <div class="rules">
+                <p class="rule no">Emitir diagnósticos</p>
+                <p class="rule no">Recomendar medicamentos</p>
+                <p class="rule no">Interpretar estudios o imágenes</p>
+                <p class="rule no">Prometer resultados</p>
+                <p class="rule no">Negociar honorarios o modificar precios</p>
+                <p class="rule no">Tomar cualquier decisión clínica</p>
+              </div>
+              <p class="hint">Estas restricciones están programadas en el sistema. Si un paciente insiste, el asistente deriva a su equipo.</p>
+            </div>
+
+            <div class="card">
+              <div class="card-head"><span class="card-t">Avisos de intervención</span></div>
+              <div class="sedes">
+                <div class="sede"><div class="sede-t"><div class="sede-n">Notificación en el celular</div><div class="sede-s">Con sonido, al instante</div></div><button class="toggle" aria-pressed="true" type="button" aria-label="Notificación en el celular"></button></div>
+                <div class="sede"><div class="sede-t"><div class="sede-n">Telegram</div><div class="sede-s">La vía más confiable</div></div><button class="toggle" aria-pressed="true" type="button" aria-label="Telegram"></button></div>
+                <div class="sede"><div class="sede-t"><div class="sede-n">Correo electrónico</div><div class="sede-s">Como respaldo</div></div><button class="toggle" aria-pressed="false" type="button" aria-label="Correo electrónico"></button></div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-head"><span class="card-t">Quién tiene acceso</span></div>
+              <div class="rowlist">
+                <div class="li"><span class="avatar" style="width:26px;height:26px">JP</span><span class="li-s">Dr. José G. Padilla</span><span class="pill">Administrador</span></div>
+                <div class="li"><span class="avatar" style="width:26px;height:26px">LM</span><span class="li-s">Lucía Márquez</span><span class="pill">Asistente</span></div>
+                <div class="li"><span class="avatar" style="width:26px;height:26px">DR</span><span class="li-s">Daniela Reyes</span><span class="pill">Asistente</span></div>
+              </div>
+              <p class="hint">Cada persona entra con su propio usuario. Queda registrado quién respondió cada conversación y en cuánto tiempo.</p>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- ===================== REQUERIMIENTOS ===================== -->
+  <section class="after">
+    <div class="after-h">
+      <h2 class="after-t">Qué necesita la computadora de su asistente</h2>
+      <p class="after-s">Prácticamente nada. El panel es una página web: todo el trabajo lo hace el servidor, no el equipo de quien lo usa. No hay programas que instalar ni licencias que comprar.</p>
+    </div>
+    <div class="reqs">
+      <div class="req"><div class="req-h">Computadora</div><p class="req-b">Cualquier equipo de los últimos <b>8 a 10 años</b>. Windows, Mac o Linux. Con 4 GB de memoria alcanza.</p></div>
+      <div class="req"><div class="req-h">Navegador</div><p class="req-b">Chrome, Edge, Firefox o Safari, <b>en versión actualizada</b>. Nada más.</p></div>
+      <div class="req"><div class="req-h">Internet</div><p class="req-b">Una conexión estable. <b>Consume muy poco</b>, menos que ver un video.</p></div>
+      <div class="req"><div class="req-h">Celular o tablet</div><p class="req-b">Cualquier teléfono con <b>Android 8 o iOS 15</b> en adelante. Se agrega a la pantalla de inicio y funciona como una app.</p></div>
+      <div class="req"><div class="req-h">Instalación</div><p class="req-b"><b>Ninguna.</b> Se entra con usuario y contraseña desde una dirección web, igual que al correo.</p></div>
+      <div class="req"><div class="req-h">Usuarios</div><p class="req-b">Cada asistente tiene <b>su propia cuenta</b> y pueden trabajar a la vez, desde equipos distintos.</p></div>
+    </div>
+  </section>
+
+  <p class="foot">Maqueta de referencia preparada para el consultorio del Dr. José Guadalupe Padilla. Los pacientes, mensajes, cifras y sedes que aparecen son inventados con fines ilustrativos y no corresponden a personas ni a datos reales. La distribución, los colores y las métricas visibles se ajustan durante el desarrollo según lo que resulte más útil en el uso diario.</p>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------------- theme ---------------- */
+  var root = document.documentElement, tBtn = document.getElementById("themeBtn");
+  function prefersDark() { return window.matchMedia("(prefers-color-scheme: dark)").matches; }
+  function isDark() { var t = root.getAttribute("data-theme"); return t ? t === "dark" : prefersDark(); }
+  function paintBtn() { tBtn.textContent = isDark() ? "Modo claro" : "Modo oscuro"; }
+  tBtn.addEventListener("click", function () {
+    root.setAttribute("data-theme", isDark() ? "light" : "dark");
+    paintBtn();
+  });
+  paintBtn();
+
+  /* ---------------- views ---------------- */
+  var navItems = document.querySelectorAll(".nav-item");
+  navItems.forEach(function (b) {
+    b.addEventListener("click", function () {
+      navItems.forEach(function (x) { x.setAttribute("aria-current", "false"); });
+      b.setAttribute("aria-current", "true");
+      document.querySelectorAll(".view").forEach(function (v) { v.classList.remove("on"); });
+      document.getElementById("v-" + b.dataset.view).classList.add("on");
+    });
+  });
+
+  /* ---------------- data ---------------- */
+  var CONV = [
+    {
+      id: "ana", sev: "critical", group: "attn",
+      name: "Ana López", time: "2 min",
+      phone: "+52 33 1428 9077", sede: "Torre Médica Providencia",
+      pill: ["critical", "Posible urgencia"],
+      preview: "«Tengo dolor fuerte del lado derecho y ya tengo fiebre…»",
+      ficha: { Ciudad: "Zapopan, Jal.", Origen: "Google", Motivo: "Dolor abdominal agudo", Contacto: "Primera vez", Última: "Hoy, 11:42" },
+      resumen: "Dolor en hipocondrio derecho desde anoche, con fiebre. Refiere ultrasonido previo con litiasis. No es paciente del consultorio.",
+      historial: [],
+      msgs: [
+        { w: "pac", t: "Buenos días doctor, tengo dolor fuerte del lado derecho desde anoche y ya tengo fiebre", h: "11:39" },
+        { w: "bot", t: "Buenos días. Lamento que se sienta así. Para orientarla correctamente le hago tres preguntas rápidas: ¿el dolor es constante o va y viene?", h: "11:39" },
+        { w: "pac", t: "Constante, y me duele más si respiro hondo. Tengo 38.5 de temperatura", h: "11:41" },
+        { w: "bot", t: "Gracias. ¿Ha presentado vómito, o nota la piel o los ojos amarillos?", h: "11:41" },
+        { w: "pac", t: "Vomité dos veces en la madrugada. Me hicieron un ultrasonido hace un mes y salieron piedras en la vesícula", h: "11:42" },
+        { w: "sys", t: "Signos de alarma detectados: fiebre, vómito y dolor constante. El asistente dejó de responder automáticamente.", alert: true },
+        { w: "bot", t: "Por lo que me describe, es importante que la valoren hoy mismo de forma presencial. Le pido que acuda al servicio de urgencias más cercano sin esperar. Ya avisé al equipo del Dr. Padilla y en un momento la contactan.", h: "11:42" },
+        { w: "sys", t: "Se notificó a Lucía Márquez y al Dr. Padilla · 11:42" }
+      ]
+    },
+    {
+      id: "roberto", sev: "warn", group: "attn",
+      name: "Roberto Méndez", time: "11 min",
+      phone: "+52 33 2210 4455", sede: "Clínica Chapalita",
+      pill: ["warn", "Pidió al doctor"],
+      preview: "«Prefiero que me explique el doctor antes de agendar la cirugía»",
+      ficha: { Ciudad: "Guadalajara, Jal.", Origen: "Recomendación", Motivo: "Hernia inguinal", Contacto: "Segunda vez", Última: "Hoy, 11:33" },
+      resumen: "Cotizó hernioplastía. Está comparando con otro cirujano. Le preocupa el tiempo de recuperación por su trabajo.",
+      historial: [{ t: "Consulta de valoración", d: "18 jul" }],
+      msgs: [
+        { w: "pac", t: "Buenas, ya fui a valoración con el doctor el mes pasado por la hernia. Quería saber costos de la cirugía", h: "11:28" },
+        { w: "bot", t: "Con gusto, Sr. Méndez. Veo que estuvo en valoración el 18 de julio. El costo de la hernioplastía laparoscópica lo confirma el Dr. Padilla según lo que haya indicado en su valoración, ya que varía según el caso. ¿Le agendo una llamada con el consultorio para dárselo con precisión?", h: "11:28" },
+        { w: "pac", t: "Es que estoy viendo con otro cirujano también y me preocupa cuánto tiempo voy a estar sin trabajar", h: "11:32" },
+        { w: "bot", t: "Es una preocupación muy razonable y prefiero que se la responda el propio doctor, que conoce su caso. ¿Le parece si le pido que lo contacte hoy mismo?", h: "11:32" },
+        { w: "pac", t: "Sí, prefiero que me explique él antes de agendar la cirugía", h: "11:33" },
+        { w: "sys", t: "El paciente pidió hablar con el doctor. Conversación derivada a una persona." }
+      ]
+    },
+    {
+      id: "teresa", sev: "warn", group: "attn",
+      name: "Teresa Ruiz", time: "24 min",
+      phone: "+52 33 1902 7714", sede: "Hospital Puerta de Hierro",
+      pill: ["warn", "Paciente molesta"],
+      preview: "«Ya me cambiaron la cita dos veces, esto no me parece»",
+      ficha: { Ciudad: "Guadalajara, Jal.", Origen: "Doctoralia", Motivo: "Control postoperatorio", Contacto: "Paciente del consultorio", Última: "Hoy, 11:20" },
+      resumen: "Operada el 3 de julio. Su control se reprogramó dos veces por cambios de agenda. Expresa molestia.",
+      historial: [{ t: "Colecistectomía laparoscópica", d: "3 jul" }, { t: "Control a los 7 días", d: "10 jul" }],
+      msgs: [
+        { w: "pac", t: "Buenos días, me llegó otra vez que cambiaron mi cita del jueves", h: "11:18" },
+        { w: "bot", t: "Buenos días, Sra. Ruiz. Efectivamente su control se movió al viernes 8 a las 17:00. Lamento el cambio.", h: "11:18" },
+        { w: "pac", t: "Ya me cambiaron la cita dos veces, esto no me parece. Yo pedí permiso en mi trabajo", h: "11:20" },
+        { w: "sys", t: "Se detectó molestia del paciente. El asistente dejó de responder automáticamente." }
+      ]
+    },
+    {
+      id: "fernanda", sev: "active", group: "bot",
+      name: "M. Fernanda Salas", time: "40 s",
+      phone: "+52 33 3388 1206", sede: "Torre Médica Providencia",
+      pill: ["active", "Agendando"],
+      preview: "Eligiendo horario — se le ofrecieron 3 opciones de esta semana",
+      ficha: { Ciudad: "Tlaquepaque, Jal.", Origen: "Facebook", Motivo: "Valoración por vesícula", Contacto: "Primera vez", Última: "Ahora" },
+      resumen: "Paciente nueva. Busca primera valoración. Preguntó si el consultorio queda cerca del centro.",
+      historial: [],
+      msgs: [
+        { w: "pac", t: "Hola, quisiera una cita para que me revisen, me dijeron que puede ser la vesícula", h: "11:44" },
+        { w: "bot", t: "Claro que sí, con gusto le agendo. El Dr. Padilla atiende en dos sedes esta semana: Torre Médica Providencia y Hospital Puerta de Hierro. ¿Cuál le queda más cómoda?", h: "11:44" },
+        { w: "pac", t: "La de Providencia, ¿queda cerca del centro?", h: "11:45" },
+        { w: "bot", t: "Está en Av. Pablo Neruda 3265, colonia Providencia, a unos 15 minutos del centro. Al confirmar le envío la ubicación exacta.\n\nTengo estos horarios disponibles:\n· Miércoles 6, 10:30\n· Miércoles 6, 12:00\n· Viernes 8, 9:30\n\n¿Cuál prefiere?", h: "11:45" },
+        { w: "pac", t: "El miércoles a las 10:30 estaría bien", h: "11:46" }
+      ]
+    },
+    {
+      id: "jorge", sev: "active", group: "bot",
+      name: "Jorge Aguilar", time: "3 min",
+      phone: "+52 33 1755 6390", sede: "Torre Médica Providencia",
+      pill: ["active", "Costos"],
+      preview: "Preguntó el costo de la valoración y de la colecistectomía",
+      ficha: { Ciudad: "Zapopan, Jal.", Origen: "Google", Motivo: "Consulta de costos", Contacto: "Primera vez", Última: "Hoy, 11:43" },
+      resumen: "Consultó precios. El asistente informó el costo de la valoración y explicó que el de la cirugía lo define el doctor tras revisarlo.",
+      historial: [],
+      msgs: [
+        { w: "pac", t: "Buen día, ¿cuánto cuesta la consulta y cuánto la operación de vesícula?", h: "11:42" },
+        { w: "bot", t: "Buen día. La consulta de valoración tiene un costo de $900 pesos en la sede de Providencia.\n\nSobre la cirugía: el costo lo define el Dr. Padilla después de revisarlo, porque depende de sus estudios y del hospital donde se realice. En la valoración se lo entrega por escrito, sin compromiso.", h: "11:42" },
+        { w: "pac", t: "Entiendo. ¿Y aceptan seguro de gastos médicos?", h: "11:43" },
+        { w: "bot", t: "Sí, el doctor trabaja con las principales aseguradoras. Si me indica cuál es la suya, le confirmo si está dentro del convenio antes de que agende.", h: "11:43" }
+      ]
+    },
+    {
+      id: "claudia", sev: "active", group: "bot",
+      name: "Claudia Ibarra", time: "8 min",
+      phone: "+52 33 2044 8831", sede: "Hospital Puerta de Hierro",
+      pill: ["active", "Postoperatorio"],
+      preview: "Consulta sobre cuidados de la herida y cuándo retomar actividad",
+      ficha: { Ciudad: "Guadalajara, Jal.", Origen: "Doctoralia", Motivo: "Seguimiento postoperatorio", Contacto: "Paciente del consultorio", Última: "Hoy, 11:38" },
+      resumen: "Operada el 22 de julio. Pregunta por cuidados generales. Sin signos de alarma referidos.",
+      historial: [{ t: "Apendicectomía laparoscópica", d: "22 jul" }, { t: "Control a los 7 días", d: "29 jul" }],
+      msgs: [
+        { w: "pac", t: "Hola, ya pasaron dos semanas de mi operación, ¿cuándo puedo volver al gimnasio?", h: "11:36" },
+        { w: "bot", t: "Qué gusto saber de usted, Sra. Ibarra. Los tiempos de recuperación los indica el Dr. Padilla en cada caso, así que no quiero darle una fecha por mi cuenta.\n\nLo que sí puedo hacer es agendarle su control para que él la revise y se lo autorice. Tengo el jueves 7 a las 17:30. ¿Le funciona?", h: "11:37" },
+        { w: "pac", t: "Sí, perfecto. Otra cosa, la herida se ve un poco rosada, ¿es normal?", h: "11:38" },
+        { w: "sys", t: "El paciente describe un signo físico. El asistente no lo interpreta y lo deriva al equipo." },
+        { w: "bot", t: "Eso prefiero que lo valore el doctor directamente y no darle una opinión por este medio. Ya avisé al consultorio para que la contacten hoy. Si nota fiebre, aumento del dolor o salida de líquido, acuda a urgencias sin esperar.", h: "11:38" }
+      ]
+    },
+    {
+      id: "luis", sev: "done", group: "bot",
+      name: "Luis Ramírez", time: "26 min",
+      phone: "+52 33 1166 2078", sede: "Torre Médica Providencia",
+      pill: ["good", "Cita agendada"],
+      preview: "Cita confirmada — jueves 7 de agosto, 10:30",
+      ficha: { Ciudad: "Zapopan, Jal.", Origen: "Recomendación", Motivo: "Control postoperatorio", Contacto: "Paciente del consultorio", Última: "Hoy, 11:20" },
+      resumen: "Resuelta por el asistente sin intervención humana. Cita creada en Doctoralia y confirmada al paciente.",
+      historial: [{ t: "Hernioplastía inguinal", d: "14 jul" }],
+      msgs: [
+        { w: "pac", t: "Buenos días, necesito mi cita de control", h: "11:18" },
+        { w: "bot", t: "Buenos días, Sr. Ramírez. Le corresponde su control de las tres semanas. Tengo el jueves 7 a las 10:30 en Torre Médica Providencia. ¿Le acomoda?", h: "11:19" },
+        { w: "pac", t: "Sí, ese día está bien", h: "11:20" },
+        { w: "bot", t: "Listo, quedó agendada:\n\n· Jueves 7 de agosto, 10:30\n· Torre Médica Providencia\n· Av. Pablo Neruda 3265, Providencia\n\nLe envío la ubicación y un día antes le recuerdo. Traiga su carnet y los estudios de control.", h: "11:20" },
+        { w: "sys", t: "Cita creada en Doctoralia · confirmación enviada · recordatorio programado para el 6 de agosto" }
+      ]
+    },
+    {
+      id: "sofia", sev: "done", group: "bot",
+      name: "Sofía Delgado", time: "1 h",
+      phone: "+52 33 2871 5540", sede: "Torre Médica Providencia",
+      pill: ["good", "Cita agendada"],
+      preview: "Cita confirmada — hoy, 17:30",
+      ficha: { Ciudad: "Guadalajara, Jal.", Origen: "Sitio web", Motivo: "Primera valoración", Contacto: "Primera vez", Última: "Hoy, 10:31" },
+      resumen: "Resuelta por el asistente. Preguntó por estacionamiento y documentación a llevar.",
+      historial: [],
+      msgs: [
+        { w: "pac", t: "Buen día, ¿tendrán espacio para hoy?", h: "10:28" },
+        { w: "bot", t: "Buen día. Sí, me queda un espacio hoy a las 17:30 en Torre Médica Providencia. ¿Se lo aparto?", h: "10:29" },
+        { w: "pac", t: "Sí por favor. ¿Hay estacionamiento?", h: "10:30" },
+        { w: "bot", t: "Sí, la torre cuenta con estacionamiento en el sótano, con acceso por Pablo Neruda.\n\nSu cita quedó para hoy a las 17:30. Le pido llegar 10 minutos antes y traer una identificación y cualquier estudio que ya tenga.", h: "10:31" },
+        { w: "sys", t: "Cita creada en Doctoralia · confirmación enviada" }
+      ]
+    }
+  ];
+
+  /* ---------------- render list ---------------- */
+  var itemsEl = document.getElementById("items");
+  var filter = "all", current = null, taken = {};
+
+  function renderList() {
+    itemsEl.innerHTML = "";
+    CONV.filter(function (c) { return filter === "all" || c.group === filter; })
+      .forEach(function (c) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "item sev-" + c.sev;
+        b.setAttribute("aria-selected", String(current === c.id));
+        b.innerHTML =
+          '<span class="stripe"></span>' +
+          '<span class="item-b">' +
+            '<span class="item-top"><span class="item-n">' + c.name + '</span><span class="item-t">' + c.time + '</span></span>' +
+            '<span class="item-m">' + c.preview + '</span>' +
+            '<span class="item-f"><span class="pill ' + c.pill[0] + '">' + c.pill[1] + '</span></span>' +
+          '</span>';
+        b.addEventListener("click", function () { open(c.id); });
+        itemsEl.appendChild(b);
+      });
+  }
+
+  document.querySelectorAll(".tab").forEach(function (t) {
+    t.addEventListener("click", function () {
+      document.querySelectorAll(".tab").forEach(function (x) { x.setAttribute("aria-selected", "false"); });
+      t.setAttribute("aria-selected", "true");
+      filter = t.dataset.filter;
+      renderList();
+    });
+  });
+
+  /* ---------------- render thread ---------------- */
+  var msgsEl = document.getElementById("msgs"),
+      pcardEl = document.getElementById("pcard"),
+      takeBtn = document.getElementById("takeBtn"),
+      compNote = document.getElementById("compNote"),
+      compIn = document.getElementById("compIn"),
+      sendBtn = document.getElementById("sendBtn");
+
+  function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
+  function open(id) {
+    var c = CONV.filter(function (x) { return x.id === id; })[0];
+    if (!c) return;
+    current = id;
+    renderList();
+
+    document.getElementById("thName").textContent = c.name;
+    document.getElementById("thMeta").textContent = c.phone + " · " + c.sede;
+
+    msgsEl.innerHTML = "";
+    c.msgs.forEach(function (m) {
+      var d = document.createElement("div");
+      if (m.w === "sys") {
+        d.className = "sysline" + (m.alert ? " alert" : "");
+        d.innerHTML = "<span>" + esc(m.t) + "</span>";
+      } else {
+        d.className = "msg " + m.w;
+        var tag = m.w === "bot" ? "Asistente" : (m.w === "hum" ? "Lucía M." : "");
+        d.innerHTML =
+          (tag ? '<span class="who-tag">' + tag + "</span>" : "") +
+          '<div class="msg-b">' + esc(m.t).replace(/\n/g, "<br>") + "</div>" +
+          '<div class="msg-t">' + (m.h || "") + "</div>";
+      }
+      msgsEl.appendChild(d);
+    });
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+
+    var f = "";
+    Object.keys(c.ficha).forEach(function (k) {
+      f += '<div class="pc-row"><span class="pc-k">' + k + '</span><span class="pc-v">' + c.ficha[k] + "</span></div>";
+    });
+    var h = "";
+    if (c.historial.length) {
+      h = '<div class="pc-sec"><div class="pc-t">Antecedentes en el consultorio</div><div class="pc-hist">' +
+        c.historial.map(function (x) { return '<div class="pc-h"><b>' + x.t + "</b><time>" + x.d + "</time></div>"; }).join("") +
+        "</div></div>";
+    }
+    pcardEl.innerHTML =
+      '<div class="pc-sec"><div class="pc-t">Ficha del paciente</div>' + f + "</div>" +
+      '<div class="pc-sec"><div class="pc-t">Resumen de la conversación</div><p class="pc-quote">' + c.resumen + "</p></div>" +
+      h +
+      '<div class="pc-sec"><div class="pc-t">Teléfono</div><div class="pc-row"><span class="pc-v" style="font-family:var(--mono);font-size:13px">' + c.phone + "</span></div></div>";
+
+    setTaken(!!taken[id]);
+  }
+
+  function setTaken(on) {
+    if (on) {
+      takeBtn.textContent = "Devolver al asistente";
+      takeBtn.classList.remove("primary");
+      compNote.classList.add("taken");
+      compNote.innerHTML = "<span>Usted tiene el control. El asistente está en pausa en esta conversación.</span>";
+      compIn.disabled = false; sendBtn.disabled = false;
+      compIn.placeholder = "Escriba su respuesta al paciente…";
+    } else {
+      takeBtn.textContent = "Tomar control";
+      takeBtn.classList.add("primary");
+      compNote.classList.remove("taken");
+      compNote.innerHTML = "<span>El asistente está atendiendo esta conversación. Tome el control para responder usted.</span>";
+      compIn.disabled = true; sendBtn.disabled = true;
+      compIn.placeholder = "Tome el control para escribir…";
+    }
+  }
+
+  takeBtn.addEventListener("click", function () {
+    taken[current] = !taken[current];
+    setTaken(taken[current]);
+    if (taken[current]) {
+      var d = document.createElement("div");
+      d.className = "sysline";
+      d.innerHTML = "<span>Lucía Márquez tomó el control · el asistente quedó en pausa</span>";
+      msgsEl.appendChild(d);
+      msgsEl.scrollTop = msgsEl.scrollHeight;
+    }
+  });
+
+  sendBtn.addEventListener("click", function () {
+    var v = compIn.value.trim();
+    if (!v) return;
+    var d = document.createElement("div");
+    d.className = "msg hum";
+    d.innerHTML = '<span class="who-tag">Lucía M.</span><div class="msg-b">' + esc(v).replace(/\n/g, "<br>") + '</div><div class="msg-t">ahora</div>';
+    msgsEl.appendChild(d);
+    compIn.value = "";
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+  });
+
+  compIn.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendBtn.click(); }
+  });
+
+  /* ---------------- config widgets ---------------- */
+  var MODE_TXT = {
+    basico: "Flujos guiados, sin costo de inteligencia artificial. Responde horarios, ubicación, precios y agenda citas. Si el paciente pregunta algo fuera de lo previsto, deriva a una persona.",
+    hibrido: "Las consultas comunes las resuelven los flujos, sin costo. La inteligencia artificial entra solo cuando el paciente pregunta algo fuera de lo previsto.",
+    ia: "Conversación natural completa en todos los casos. Entiende cualquier forma de preguntar y resuelve objeciones. Es el modo de mayor consumo."
+  };
+  var MODE_SPEND = { basico: [0, 0], hibrido: [2.4, 16], ia: [9.1, 61] };
+  document.querySelectorAll(".mode").forEach(function (m) {
+    m.addEventListener("click", function () {
+      document.querySelectorAll(".mode").forEach(function (x) { x.setAttribute("aria-pressed", "false"); });
+      m.setAttribute("aria-pressed", "true");
+      document.getElementById("modeDesc").textContent = MODE_TXT[m.dataset.mode];
+      var s = MODE_SPEND[m.dataset.mode];
+      document.getElementById("spendV").textContent = "$" + s[0].toFixed(2);
+      document.getElementById("spendBar").style.width = s[1] + "%";
+    });
+  });
+
+  document.querySelectorAll(".toggle").forEach(function (t) {
+    t.addEventListener("click", function () {
+      t.setAttribute("aria-pressed", t.getAttribute("aria-pressed") === "true" ? "false" : "true");
+    });
+  });
+
+  /* ---------------- boot ---------------- */
+  renderList();
+  open("ana");
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,261 @@
+# Asistente de WhatsApp — Consultorio Dr. José Guadalupe Padilla
+
+Cirugía General y Laparoscópica · Guadalajara
+
+Asistente que atiende WhatsApp 24/7: conversa con naturalidad, agenda en la
+agenda real del consultorio, envía recordatorios y pasa la conversación a
+una persona cuando hace falta criterio humano.
+
+---
+
+## Estado
+
+**Fase 1 · Hito 1 — en curso.** Circuito completo de mensaje entrante a
+respuesta enviada, funcionando contra el número de prueba de Meta.
+
+| Componente | Estado |
+|---|---|
+| Barrera clínica | ✅ funcionando, 69 pruebas |
+| Clasificación de intención | ✅ funcionando |
+| Reglas de escalado | ✅ funcionando |
+| Flujos determinísticos (modo básico) | ✅ funcionando |
+| Capa de IA con tope de gasto | ✅ funcionando |
+| Webhook de WhatsApp con validación de firma | ✅ funcionando |
+| Agenda — Plan B (calendario) | ✅ funcionando |
+| Agenda — Plan A (API Doctoralia) | ⏳ esperando credenciales de Docplanner |
+| Panel web | ⏳ Hito 3 · maqueta aprobada en `panel-asistente-dr-padilla.html` |
+| Recordatorios automáticos | ⏳ Hito 2 |
+
+El número real del consultorio **sigue funcionando normalmente en el
+celular**. Se migra a la API el día 14, en horario de cierre, con el panel
+ya terminado y el personal capacitado.
+
+---
+
+## Puesta en marcha
+
+```bash
+python -m venv .venv
+.venv/Scripts/activate          # Windows
+pip install -r requirements.txt
+
+cp .env.example .env            # completar credenciales
+python -m app.seed              # datos iniciales
+
+uvicorn app.main:aplicacion --reload
+```
+
+- Panel de estado: <http://localhost:8000/salud>
+- Maqueta del panel: <http://localhost:8000/>
+- Documentación de la API: <http://localhost:8000/docs>
+
+Pruebas:
+
+```bash
+pytest -q
+```
+
+---
+
+## Cómo circula un mensaje
+
+```
+WhatsApp
+   │
+   ▼
+webhook.py ──── valida firma X-Hub-Signature-256 ──── responde 200 de inmediato
+   │
+   ▼
+router.py
+   │
+   ├─ 1.  Guardar el mensaje                    nunca se pierde nada
+   ├─ 2.  ¿La lleva una persona?                → el bot calla
+   ├─ 3.  BARRERA CLÍNICA  (safety.py)          → antes que todo lo demás
+   ├─ 4.  Clasificar intención  (intents.py)    reglas, costo cero
+   ├─ 5.  ¿Escalar?  (escalation.py)            → derivar y avisar
+   ├─ 6.  Flujos  (flows.py)                    resuelto sin costo
+   ├─ 7.  IA  (ai.py)                           solo si el modo lo permite
+   └─ 8.  Si nada resolvió                      → derivar a una persona
+```
+
+**El invariante del sistema:** la IA nunca ve un mensaje que la barrera
+clínica bloqueó.
+
+---
+
+## La barrera clínica
+
+`app/brain/safety.py` es el módulo más importante del proyecto y el único
+que no admite atajos.
+
+- Es **determinístico**. No depende de un modelo de lenguaje, porque un
+  modelo puede fallar y aquí el costo de fallar lo paga un paciente.
+- Corre **antes** de clasificar y antes de cualquier llamada a la IA.
+- **Ante la duda, deriva.** Nunca tranquiliza, nunca minimiza, nunca
+  interpreta.
+- Cualquier adjunto (foto, estudio, audio) se deriva **sin descargarse**.
+
+Qué detecta y qué hace:
+
+| Situación | Acción |
+|---|---|
+| Signos de alarma (fiebre alta, sangrado, herida abierta, no puede respirar…) | Indica acudir a urgencias + avisa al consultorio |
+| Descripción de síntomas, pedido de opinión | Deriva sin opinar |
+| Pregunta por medicamentos o dosis | Deriva sin sugerir ninguno |
+| Envío o interpretación de estudios | Deriva, pide llevarlos a consulta |
+| Pronóstico o promesa de resultados | Deriva al doctor |
+| Cualquier adjunto | Deriva sin abrirlo |
+
+> **Pendiente antes de producción:** el Dr. Padilla debe revisar y firmar la
+> lista de signos de alarma de `safety.py`. El criterio clínico es suyo, no
+> del desarrollador.
+
+Las pruebas de este módulo son bloqueantes: si una falla, el sistema no sale
+a producción.
+
+```bash
+pytest tests/test_safety.py -v
+```
+
+---
+
+## Los tres modos
+
+Se cambian desde el panel, sin reprogramar nada.
+
+| Modo | Qué hace | Costo |
+|---|---|---|
+| `basico` | Solo flujos. Lo que no reconoce, lo deriva. | cero |
+| `hibrido` | Flujos para lo común; la IA solo entra en lo no previsto. | ~80% menos |
+| `ia` | IA en todas las respuestas. | mayor |
+
+**Tope de gasto mensual con caída automática.** Al alcanzar
+`IA_LIMITE_MENSUAL_USD`, el sistema pasa solo a modo básico y avisa. Nunca
+hay cargos sorpresa. Conviene además fijar el tope del lado de OpenAI: doble
+red.
+
+---
+
+## La agenda: Plan A y Plan B
+
+Doctoralia es la única fuente de verdad. El widget del sitio web, el bot de
+WhatsApp y el consultorio escriben todos sobre la misma agenda.
+
+**Plan A — `AGENDA_PROVEEDOR=api`.** Integración directa. Lectura y
+escritura. Todo automático.
+
+**Plan B — `AGENDA_PROVEEDOR=calendar`.** Activo hoy. Lee el feed iCal de
+Doctoralia y mantiene un módulo propio de citas.
+
+> **La limitación del Plan B: los feeds iCal son de solo lectura.** No se
+> puede escribir en Doctoralia. Por eso las citas nacen como `SOLICITADA` y
+> la asistente las confirma desde el panel. Los turnos del mismo día exigen
+> siempre esa confirmación humana, porque el widget del sitio web reserva
+> sobre la misma agenda y el feed puede tardar en reflejarlo.
+
+Ambos caminos respetan:
+
+- **Re-verificación al confirmar**, no al ofrecer. Si el hueco se ocupó
+  mientras el paciente elegía, se le ofrecen alternativas — nunca un error.
+- **Primero la sede, después la fecha.** Ofrecer horarios sin saber a qué
+  consultorio va significa ofrecer huecos que en esa dirección no existen.
+- **Margen de traslado entre sedes** (`MINUTOS_TRASLADO_ENTRE_SEDES`). El
+  doctor no puede estar en dos consultorios a la vez.
+- **Sedes con interruptor.** Una sede inactiva no se ofrece. Las citas ya
+  agendadas en ella se conservan.
+
+---
+
+## Estructura
+
+```
+app/
+  config.py            configuración desde el entorno
+  models.py            modelo de datos
+  db.py                motor y sesiones
+  security.py          firma de Meta, claves
+  notify.py            avisos por Telegram y correo
+  main.py              aplicación FastAPI
+
+  whatsapp/
+    webhook.py         endpoints de Meta
+    parser.py          normaliza la carga entrante
+    client.py          envío: texto, botones, listas, plantillas
+
+  brain/
+    safety.py          ← barrera clínica
+    intents.py         clasificación por reglas
+    escalation.py      cuándo pasa a una persona
+    flows.py           respuestas determinísticas
+    ai.py              OpenAI con tope de gasto
+    router.py          el circuito completo
+
+  agenda/
+    base.py            interfaz común
+    doctoralia_api.py  Plan A
+    calendar_sync.py   Plan B
+    service.py         lo que usa el resto del sistema
+
+tests/                 84 pruebas
+```
+
+---
+
+## Qué se guarda y qué no
+
+**Se guarda:** nombre, teléfono, ciudad, motivo administrativo de consulta,
+fuente de referencia, historial de conversaciones, citas y fecha de última
+interacción.
+
+**No se guarda:** nada clínico. Ni síntomas, ni diagnósticos, ni estudios,
+ni fotografías. Lo que el paciente escriba de esa índole se deriva a una
+persona y no se procesa.
+
+Menos datos guardados es menos superficie de riesgo. Es una decisión de
+diseño, no un descuido.
+
+Otras medidas: validación de firma en cada mensaje entrante, cifrado en
+tránsito y en reposo, registro de auditoría de quién respondió qué, usuario
+individual por persona, aviso de consentimiento en el primer contacto
+(LFPDPPP) y retención configurable de los historiales.
+
+---
+
+## Pendientes por hito
+
+**Hito 1 · días 1–4**
+- [x] Estructura, modelo de datos, webhook con validación de firma
+- [x] Barrera clínica, intenciones, escalado, flujos
+- [x] Capa de IA con tope de gasto
+- [x] Agenda Plan B
+- [ ] Solicitud de acceso a la API ante Docplanner — **enviar el día 1**
+- [ ] App de Meta y número de prueba
+- [ ] Servidor desplegado en cuenta del consultorio
+- [ ] Plantillas de recordatorio enviadas a aprobación de Meta
+
+**Hito 2 · días 5–9**
+- [ ] Contenido real del consultorio (precios, horarios, 3 direcciones, convenios)
+- [ ] Criterio de urgencias revisado y firmado por el Dr. Padilla
+- [ ] Recordatorio 24 h con botones de confirmar y reprogramar
+- [ ] Cancelación y reprogramación desde WhatsApp
+
+**Hito 3 · días 10–14**
+- [ ] Panel web, según `panel-asistente-dr-padilla.html`
+- [ ] Toma de control y bandeja de pendientes
+- [ ] Métricas y registro de auditoría en pantalla
+- [ ] Capacitación del personal
+- [ ] **Migración del número real** — último paso, en horario de cierre
+
+---
+
+## Notas de operación
+
+- La ventana de 24 horas: el texto libre solo funciona si el paciente
+  escribió en las últimas 24 h. Fuera de eso hay que usar plantilla
+  aprobada, y eso sí tiene costo.
+- Meta reintenta si el webhook tarda o falla, y el paciente recibe
+  respuestas duplicadas. Por eso se responde 200 de inmediato y se procesa
+  en segundo plano.
+- El sistema se conecta con un **usuario del sistema** de Meta, no con una
+  cuenta personal. Al terminar el proyecto nada queda atado al
+  desarrollador.
