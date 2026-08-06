@@ -196,6 +196,13 @@ WhatsApp y el consultorio escriben todos sobre la misma agenda.
 **Plan A — `AGENDA_PROVEEDOR=api`.** Integración directa. Lectura y
 escritura. Todo automático.
 
+> **Condicionante del plan contratado.** El consultorio está en plan
+> **Starter** y pasa a **VIP el 11 de agosto de 2026**. El acceso a la API
+> —y en Starter posiblemente también la exportación iCal— depende del plan
+> y de una autorización de Docplanner. Hasta el 11 de agosto se trabaja
+> contra un calendario local de prueba; ese día se reevalúa qué habilita
+> realmente el VIP. Solicitud formal enviada a Docplanner el día 1.
+
 **Plan B — `AGENDA_PROVEEDOR=calendar`.** Activo hoy. Lee el feed iCal de
 Doctoralia y mantiene un módulo propio de citas.
 
