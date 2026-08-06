@@ -91,8 +91,11 @@ SENALES: dict[Intencion, list[tuple[str, float]]] = {
         (r"\bme (?:lo|la) recomendo\b", 0.7),
     ],
     Intencion.INFORMACION: [
-        (r"\b(?:que|cuales) (?:horarios?|dias) (?:atiende|atienden|hay)\b", 0.9),
+        (r"\b(?:que|cuales|cual es el|cuál) (?:son (?:los|las) )?"
+         r"(?:horarios?|dias|dias de atencion)\b", 0.9),
+        (r"\bhorarios? (?:de atencion|manejan|tienen|hay)\b", 0.9),
         (r"\b(?:a que hora|hasta que hora) (?:abren|cierran|atienden)\b", 0.9),
+        (r"\b(?:que dias|cuando) (?:atiende|atienden|consulta)\b", 0.9),
         (r"\b(?:que|cuales) (?:estudios|documentos|papeles) (?:llevo|necesito|debo llevar)\b", 0.9),
         (r"\b(?:que|cual) (?:especialidad|hace|opera) el (?:dr|doctor)\b", 0.8),
         (r"\b(?:atiende|atienden) (?:ninos|pediatric)\w*\b", 0.8),
@@ -139,7 +142,20 @@ def clasificar(texto: str) -> Clasificacion:
         if peso > mejor_peso:
             mejor, mejor_peso, mejor_coincidencias = intencion, peso, tuple(encontradas)
 
+    # Un saludo con algo pegado detrás ("hola, los encontré en Doctoralia")
+    # sigue siendo un saludo, siempre que no traiga otra intención más
+    # fuerte. Sin esto, un primer mensaje amable se trataba como
+    # incomprensible y terminaba en la bandeja de la asistente.
+    if mejor_peso < UMBRAL_CONFIANZA and _EMPIEZA_SALUDANDO.match(t):
+        return Clasificacion(Intencion.SALUDO, 0.7, ("saludo inicial",))
+
     return Clasificacion(mejor, mejor_peso, mejor_coincidencias)
+
+
+_EMPIEZA_SALUDANDO = re.compile(
+    r"^(?:hol+a+|buenas|buen dia|buenos dias|buenas tardes|buenas noches|"
+    r"que tal|saludos|disculpe|con permiso)\b"
+)
 
 
 def detectar_fuente(texto: str) -> str:

@@ -205,15 +205,23 @@ def _costos() -> Salida:
     if not sedes:
         return SIN_RESOLVER
 
-    if len(sedes) == 1:
-        precio = f"${sedes[0].precio_valoracion:,.0f} pesos"
+    precios = {s.precio_valoracion for s in sedes}
+
+    if len(precios) == 1:
+        # Mismo precio en todas: se dice una sola vez. Repetirlo por sede
+        # suena a lista de tarifas y no a una recepcionista.
+        encabezado = (
+            f"La consulta de valoración tiene un costo de "
+            f"${sedes[0].precio_valoracion:,.0f} pesos."
+        )
     else:
-        precio = "\n".join(
+        listado = "\n".join(
             f"· {s.nombre}: ${s.precio_valoracion:,.0f} pesos" for s in sedes
         )
+        encabezado = f"El costo de la valoración depende de la sede:\n\n{listado}"
 
     return Salida(texto=(
-        f"La consulta de valoración tiene un costo de {precio}.\n\n"
+        f"{encabezado}\n\n"
         f"Sobre una cirugía, el costo lo define el Dr. Padilla después de "
         f"revisarlo, porque depende de sus estudios y del hospital. En la "
         f"valoración se lo entrega por escrito, sin compromiso.\n\n"

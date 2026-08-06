@@ -57,6 +57,16 @@ NO_ENTENDI = (
     "del consultorio para que la atiendan personalmente."
 )
 
+# Primer tropiezo: se pide una aclaración en lugar de molestar a una
+# persona. Derivar cada mensaje que no se entiende satura la bandeja de la
+# asistente, y una bandeja saturada se deja de mirar — con lo cual las
+# derivaciones que sí importan se pierden.
+PEDIR_ACLARACION = (
+    "Disculpe, no estoy segura de haber entendido. ¿Me ayuda diciéndome si "
+    "busca agendar una cita, conocer los costos, la ubicación del consultorio, "
+    "o si es otra cosa?"
+)
+
 
 # ======================================================================
 #  Entrada
@@ -149,12 +159,21 @@ async def _procesar(entrante: MensajeEntrante) -> None:
             return
 
     # --- 8. nadie pudo ----------------------------------------------------
+    # Al primer tropiezo se pide una aclaración. Solo se deriva cuando ya se
+    # intentó las veces acordadas: así lo que llega a la bandeja de la
+    # asistente es lo que de verdad necesita a una persona.
     _sumar_intento(conversacion.id)
+    intentos = conversacion.intentos_fallidos + 1
+
+    if intentos < escalation.INTENTOS_ANTES_DE_DERIVAR:
+        await _responder(conversacion.id, paciente.telefono, PEDIR_ACLARACION)
+        return
+
     await _responder(conversacion.id, paciente.telefono, NO_ENTENDI)
     await _escalar(conversacion, paciente, escalation.Decision(
         escalar=True,
         motivo=escalation.MotivoEscalado.NO_COMPRENDIDO,
-        aviso="El asistente no pudo resolver la consulta.",
+        aviso=f"El asistente no logró resolver la consulta en {intentos} intentos.",
     ))
 
 

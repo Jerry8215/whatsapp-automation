@@ -22,8 +22,8 @@ respuesta enviada, funcionando contra el número de prueba de Meta.
 | Capa de IA con tope de gasto | ✅ funcionando |
 | Webhook de WhatsApp con validación de firma | ✅ funcionando |
 | Agenda — Plan B (calendario) | ✅ funcionando |
+| **Panel de control** | ✅ funcionando, con acceso por usuario |
 | Agenda — Plan A (API Doctoralia) | ⏳ esperando credenciales de Docplanner |
-| Panel web | ⏳ Hito 3 · maqueta aprobada en `panel-asistente-dr-padilla.html` |
 | Recordatorios automáticos | ⏳ Hito 2 |
 
 El número real del consultorio **sigue funcionando normalmente en el
@@ -41,13 +41,18 @@ pip install -r requirements.txt
 
 cp .env.example .env            # completar credenciales
 python -m app.seed              # datos iniciales
+python -m app.demo              # conversaciones de ejemplo, para ver el panel con contenido
 
 uvicorn app.main:aplicacion --reload
 ```
 
-- Panel de estado: <http://localhost:8000/salud>
-- Maqueta del panel: <http://localhost:8000/>
+- Panel: <http://localhost:8000/panel>
+- Estado del servicio: <http://localhost:8000/salud>
+- Maqueta aprobada: <http://localhost:8000/maqueta>
 - Documentación de la API: <http://localhost:8000/docs>
+
+Usuarios que crea el `seed`, **con contraseña a cambiar en el primer acceso**:
+`doctor@consultorio.local` y `asistente@consultorio.local`.
 
 Pruebas:
 
@@ -116,6 +121,53 @@ a producción.
 ```bash
 pytest tests/test_safety.py -v
 ```
+
+---
+
+## El panel
+
+Cuatro secciones. Funciona igual en computadora y en celular: es una página
+web, se agrega a la pantalla de inicio y no hay nada que instalar.
+
+**Resumen del día** — pendientes, conversaciones, citas, conversión, tiempo
+de respuesta, urgencias, serie de 7 días, origen de los pacientes, próximas
+citas y motivos de pérdida.
+
+**Conversaciones** — bandeja con filtros, hilo completo, y **toma de
+control**: al escribir desde el panel el asistente se pausa solo en esa
+conversación. Al costado, la ficha de contacto del paciente con teléfono,
+ciudad, cómo llegó, sede y sus citas, más accesos directos para llamar,
+abrir el chat en WhatsApp o copiar el número.
+
+**Pacientes** — el directorio de contactos del consultorio, con buscador
+por nombre o teléfono.
+
+**Configuración** — modo del asistente, medidor de consumo de IA,
+interruptor de sedes, estado de la agenda y quién tiene acceso.
+
+Sobre los permisos: la asistente ve y responde conversaciones; solo el
+doctor cambia el modo, activa sedes y consulta la auditoría. Cada persona
+entra con su propio usuario y toda acción que modifica algo queda
+registrada con su nombre.
+
+---
+
+## Cuándo se deriva a una persona
+
+Un asistente que deriva de más satura la bandeja, y una bandeja saturada se
+deja de mirar — con lo cual se pierden las derivaciones que sí importaban.
+Por eso el criterio es explícito:
+
+**Llega a una persona:** posible urgencia, contenido clínico o adjuntos,
+pedido de hablar con el doctor, molestia o reclamo, solicitud de
+facturación, y la consulta que no se entendió **tras dos intentos**.
+
+**No molesta a nadie:** saludos, precios, horarios, ubicación,
+agendamiento, indicaciones. Y el primer mensaje que no se entiende: ahí se
+pide una aclaración, no se deriva.
+
+Está cubierto con pruebas en las dos direcciones — `tests/test_escalado.py`
+verifica tanto lo que debe escalar como lo que no.
 
 ---
 
@@ -196,7 +248,15 @@ app/
     calendar_sync.py   Plan B
     service.py         lo que usa el resto del sistema
 
-tests/                 84 pruebas
+  panel/
+    auth.py            sesión por usuario, cookie firmada
+    api.py             API del panel
+    static/panel.html  la interfaz
+
+  seed.py              datos iniciales
+  demo.py              conversaciones de ejemplo (solo desarrollo)
+
+tests/                 141 pruebas
 ```
 
 ---
@@ -240,9 +300,11 @@ individual por persona, aviso de consentimiento en el primer contacto
 - [ ] Cancelación y reprogramación desde WhatsApp
 
 **Hito 3 · días 10–14**
-- [ ] Panel web, según `panel-asistente-dr-padilla.html`
-- [ ] Toma de control y bandeja de pendientes
-- [ ] Métricas y registro de auditoría en pantalla
+- [x] Panel web, según la maqueta aprobada
+- [x] Toma de control y bandeja de pendientes
+- [x] Métricas y ficha de contacto del paciente
+- [x] Acceso por usuario, permisos por rol y auditoría
+- [ ] Auditoría visible en pantalla
 - [ ] Capacitación del personal
 - [ ] **Migración del número real** — último paso, en horario de cierre
 

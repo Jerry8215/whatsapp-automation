@@ -6,11 +6,12 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from pathlib import Path
 
 from app.config import config
 from app.db import crear_tablas
+from app.panel.api import router as panel_router
 from app.whatsapp.webhook import router as webhook_router
 
 logging.basicConfig(
@@ -42,6 +43,20 @@ aplicacion = FastAPI(
 )
 
 aplicacion.include_router(webhook_router)
+aplicacion.include_router(panel_router)
+
+PANEL = Path(__file__).resolve().parent / "panel" / "static" / "panel.html"
+
+
+@aplicacion.get("/panel", include_in_schema=False)
+@aplicacion.get("/panel/{ruta:path}", include_in_schema=False)
+async def panel(ruta: str = "") -> FileResponse:
+    """
+    El panel es una sola página. Cualquier ruta bajo /panel la sirve, y el
+    enrutado ocurre del lado del navegador — así un enlace de aviso como
+    /panel/conversaciones/12 abre directo sin dar 404.
+    """
+    return FileResponse(PANEL)
 
 
 @aplicacion.get("/salud", tags=["sistema"])
@@ -62,9 +77,14 @@ async def salud() -> JSONResponse:
     })
 
 
-@aplicacion.get("/", include_in_schema=False, response_model=None)
+@aplicacion.get("/", include_in_schema=False)
+async def raiz() -> RedirectResponse:
+    return RedirectResponse("/panel")
+
+
+@aplicacion.get("/maqueta", include_in_schema=False, response_model=None)
 async def maqueta() -> FileResponse | JSONResponse:
-    """Maqueta del panel aprobada por el consultorio. El panel real va en el Hito 3."""
+    """Maqueta aprobada por el consultorio. Se conserva como referencia visual."""
     archivo = RAIZ / "panel-asistente-dr-padilla.html"
     if archivo.exists():
         return FileResponse(archivo)

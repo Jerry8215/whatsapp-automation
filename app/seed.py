@@ -39,6 +39,8 @@ SEDES = [
             {"dia": V, "desde": "09:00", "hasta": "14:00"},
         ]),
         duracion_cita_min=30,
+        # Precio provisional. Lo confirma el consultorio (punto 3 del pedido).
+        precio_valoracion=900,
         activa=True,
         orden=1,
     ),
@@ -46,6 +48,7 @@ SEDES = [
         nombre="Hospital Puerta de Hierro",
         direccion="(pendiente de confirmar con el consultorio)",
         horarios="Martes y jueves de 16:00 a 20:00",
+        precio_valoracion=900,
         horario_json=json.dumps([
             {"dia": M, "desde": "16:00", "hasta": "20:00"},
             {"dia": J, "desde": "16:00", "hasta": "20:00"},
