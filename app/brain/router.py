@@ -57,6 +57,13 @@ NO_ENTENDI = (
     "del consultorio para que la atiendan personalmente."
 )
 
+NO_ENTENDI_FUERA_HORARIO = (
+    "Disculpe, no logré entenderle bien. En este momento el consultorio está "
+    "cerrado, pero dejé su mensaje marcado y la contactan en cuanto abran.\n\n"
+    "Si se trata de algo que no puede esperar, acuda al servicio de urgencias "
+    "más cercano."
+)
+
 # Primer tropiezo: se pide una aclaración en lugar de molestar a una
 # persona. Derivar cada mensaje que no se entiende satura la bandeja de la
 # asistente, y una bandeja saturada se deja de mirar — con lo cual las
@@ -107,6 +114,12 @@ async def _procesar(entrante: MensajeEntrante) -> None:
     # --- 3. barrera clínica ---------------------------------------------
     veredicto = safety.evaluar(entrante.texto, entrante.tipo_adjunto)
 
+    # El comportamiento cambia fuera del horario de atención: no se puede
+    # prometer que alguien va a responder en un rato.
+    from app.tiempo import en_horario_de_atencion
+
+    abierto = en_horario_de_atencion()
+
     # --- 4. intención ----------------------------------------------------
     clasificacion = intents.clasificar(entrante.texto)
 
@@ -127,9 +140,14 @@ async def _procesar(entrante: MensajeEntrante) -> None:
     if decision.escalar:
         # Si la barrera clínica dictó una respuesta, se envía ESA, tal cual.
         # No la genera un modelo ni se improvisa.
-        respuesta = veredicto.respuesta or escalation.MENSAJE_TRANSICION
+        respuesta = safety.respuesta_para(veredicto, abierto)
+        if not respuesta:
+            respuesta = (
+                escalation.MENSAJE_TRANSICION if abierto
+                else escalation.MENSAJE_TRANSICION_FUERA_HORARIO
+            )
         await _responder(conversacion.id, paciente.telefono, respuesta)
-        await _escalar(conversacion, paciente, decision)
+        await _escalar(conversacion, paciente, decision, abierto=abierto)
         return
 
     # --- 6. flujos --------------------------------------------------------
@@ -138,6 +156,7 @@ async def _procesar(entrante: MensajeEntrante) -> None:
         texto=entrante.texto,
         paciente=paciente,
         conversacion=conversacion,
+        abierto=abierto,
     )
 
     if salida.paso == "cita:buscar_horarios":
@@ -176,12 +195,15 @@ async def _procesar(entrante: MensajeEntrante) -> None:
         await _responder(conversacion.id, paciente.telefono, PEDIR_ACLARACION)
         return
 
-    await _responder(conversacion.id, paciente.telefono, NO_ENTENDI)
+    await _responder(
+        conversacion.id, paciente.telefono,
+        NO_ENTENDI if abierto else NO_ENTENDI_FUERA_HORARIO,
+    )
     await _escalar(conversacion, paciente, escalation.Decision(
         escalar=True,
         motivo=escalation.MotivoEscalado.NO_COMPRENDIDO,
         aviso=f"El asistente no logró resolver la consulta en {intentos} intentos.",
-    ))
+    ), abierto=abierto)
 
 
 async def registrar_estado(estado: EstadoEntrega) -> None:
@@ -578,6 +600,7 @@ async def _escalar(
     conversacion: Conversacion,
     paciente: Paciente,
     decision: escalation.Decision,
+    abierto: bool = True,
 ) -> None:
     with sesion() as s:
         c = s.get(Conversacion, conversacion.id)
@@ -595,9 +618,13 @@ async def _escalar(
         ))
         s.commit()
 
+    cuerpo = decision.aviso
+    if not abierto:
+        cuerpo += "\n\n(Llegó fuera del horario de atención.)"
+
     await avisar(
         titulo=paciente.nombre or paciente.telefono,
-        cuerpo=decision.aviso,
+        cuerpo=cuerpo,
         conversacion_id=conversacion.id,
         urgente=decision.urgente,
     )

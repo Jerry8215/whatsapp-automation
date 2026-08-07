@@ -151,6 +151,7 @@ def atender(
     texto: str,
     paciente: Paciente,
     conversacion: Conversacion,
+    abierto: bool = True,
 ) -> Salida:
     """
     Punto de entrada. Devuelve SIN_RESOLVER cuando no hay flujo capaz de
@@ -162,7 +163,7 @@ def atender(
 
     match intencion:
         case Intencion.SALUDO:
-            return _saludo(paciente)
+            return _saludo(paciente, abierto)
         case Intencion.CITA:
             return _iniciar_cita(paciente, conversacion)
         case Intencion.COSTOS:
@@ -201,15 +202,24 @@ def es_recurrente(paciente: Paciente) -> bool:
         return len(previas) > 1
 
 
-def _saludo(paciente: Paciente) -> Salida:
+def _saludo(paciente: Paciente, abierto: bool = True) -> Salida:
     saludo = _saludo_por_hora()
+
+    # Fuera de horario se avisa, pero sin cerrarle la puerta: el asistente
+    # igual puede resolver dudas y agendar. Decir «estamos cerrados» y nada
+    # más haría que el paciente se vaya.
+    cierre = (
+        "¿En qué le puedo ayudar?" if abierto else
+        "En este momento el consultorio está cerrado, pero puedo resolver "
+        "sus dudas y agendarle una cita. ¿En qué le ayudo?"
+    )
 
     if es_recurrente(paciente) and paciente.nombre:
         nombre = paciente.nombre.split()[0]
         return Salida(
             texto=(
                 f"{saludo}, {nombre}. Soy el asistente del consultorio del "
-                f"Dr. Padilla. ¿En qué le puedo ayudar?"
+                f"Dr. Padilla.\n\n{cierre}"
             )
         )
 
@@ -217,8 +227,7 @@ def _saludo(paciente: Paciente) -> Salida:
     return Salida(
         texto=(
             f"{saludo} 👋 Soy el asistente del consultorio del Dr. José "
-            f"Guadalupe Padilla, Cirujano General y Laparoscópico.\n\n"
-            f"¿En qué le puedo ayudar?"
+            f"Guadalupe Padilla, Cirujano General y Laparoscópico.\n\n{cierre}"
         )
     )
 

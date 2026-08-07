@@ -12,6 +12,7 @@ from pathlib import Path
 from app.config import config
 from app.db import crear_tablas
 from app.panel.api import router as panel_router
+from app.panel.contenido import router as contenido_router
 from app.whatsapp.webhook import router as webhook_router
 
 logging.basicConfig(
@@ -49,6 +50,7 @@ aplicacion = FastAPI(
 
 aplicacion.include_router(webhook_router)
 aplicacion.include_router(panel_router)
+aplicacion.include_router(contenido_router)
 
 # Diagnóstico: consulta el estado de la configuración de Meta desde el
 # servidor, sin necesidad de entrar a la consola. Solo para el administrador.

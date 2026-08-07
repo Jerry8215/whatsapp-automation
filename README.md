@@ -24,6 +24,10 @@ respuesta enviada, funcionando contra el número de prueba de Meta.
 | Agenda — Plan B (calendario) | ✅ funcionando |
 | **Panel de control** | ✅ funcionando, con acceso por usuario |
 | **Recordatorios y ciclo de la cita** | ✅ funcionando |
+| **Modo fuera de horario** | ✅ funcionando |
+| **Edición de contenido desde el panel** | ✅ funcionando |
+| **Agenda y citas por cargar** | ✅ funcionando |
+| **Registro de actividad** | ✅ funcionando |
 | **Zona horaria del consultorio** | ✅ funcionando |
 | Agenda — Plan A (API Doctoralia) | ❌ descartado · Doctoralia confirmó que no hay API |
 | Plantillas de Meta | ⏳ redactadas, a la espera de acceso para enviarlas |
@@ -150,8 +154,20 @@ abrir el chat en WhatsApp o copiar el número.
 **Pacientes** — el directorio de contactos del consultorio, con buscador
 por nombre o teléfono.
 
+**Agenda** — todas las citas y, sobre todo, la lista de **por cargar en
+Doctoralia**: la tarea diaria de la asistente. Mientras una cita siga ahí,
+se ve; así ninguna se pierde.
+
+**Contenido** — precios, direcciones, horarios, franjas reservadas y
+respuestas frecuentes. Lo edita el consultorio sin depender del
+desarrollador. Los horarios se escriben en lenguaje natural
+(«Martes 10:00-12:00») y se validan antes de guardar: un bloque mal cargado
+dejaría al asistente sin poder ofrecer turnos, y sería un fallo silencioso.
+
 **Configuración** — modo del asistente, medidor de consumo de IA,
-interruptor de sedes, estado de la agenda y quién tiene acceso.
+interruptor de sedes, cambio de contraseña y quién tiene acceso.
+
+**Registro de actividad** — quién hizo qué y cuándo. Solo el doctor.
 
 Sobre los permisos: la asistente ve y responde conversaciones; solo el
 doctor cambia el modo, activa sedes y consulta la auditoría. Cada persona
@@ -227,6 +243,22 @@ para enviar a aprobación.
 
 Todas se pueden ejecutar dos veces sin causar daño: si el servicio se
 reinicia a mitad de una ronda, la siguiente retoma sin duplicar nada.
+
+---
+
+## Fuera del horario de atención
+
+El asistente sigue atendiendo y agendando: un paciente que escribe a las
+once de la noche debe poder agendar, o se pierde.
+
+Lo que cambia es lo que **no** se promete. Dentro del horario, ante una
+urgencia el asistente dice «ya avisé al equipo para que la contacten».
+Fuera de horario **no puede decirlo**, porque a las tres de la madrugada no
+hay nadie — y un paciente con signos de alarma que se queda esperando una
+llamada que no va a llegar es el peor resultado posible de este sistema.
+Ahí el mensaje insiste en acudir de inmediato y sin esperar respuesta.
+
+Cubierto en `tests/test_fuera_horario.py`.
 
 ---
 
@@ -354,6 +386,7 @@ app/
   panel/
     auth.py            sesión por usuario, cookie firmada
     api.py             API del panel
+    contenido.py       edición de contenido, agenda y contraseña
     static/panel.html  la interfaz
 
   tiempo.py            zona horaria: se guarda UTC, se muestra local
@@ -365,7 +398,7 @@ app/
   diagnostico.py       estado de la configuración de Meta vía Graph API
   arranque.py          preparación previa al despliegue
 
-tests/                 178 pruebas
+tests/                 219 pruebas
 ```
 
 ---

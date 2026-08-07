@@ -319,8 +319,11 @@ tbody tr:hover{background:var(--surface-3)}
     <div class="nav">
       <button class="nav-item" data-vista="inicio" aria-current="true" type="button">Resumen del día</button>
       <button class="nav-item" data-vista="chats" type="button">Conversaciones <span class="nav-badge oculto" id="badge">0</span></button>
+      <button class="nav-item" data-vista="agenda" type="button">Agenda <span class="nav-badge oculto" id="badgeCargar">0</span></button>
       <button class="nav-item" data-vista="pacientes" type="button">Pacientes</button>
+      <button class="nav-item" data-vista="contenido" type="button">Contenido</button>
       <button class="nav-item" data-vista="config" type="button">Configuración</button>
+      <button class="nav-item oculto" data-vista="auditoria" id="navAuditoria" type="button">Registro de actividad</button>
     </div>
     <div class="rail-foot">
       <div class="user">
@@ -440,6 +443,82 @@ tbody tr:hover{background:var(--surface-3)}
       <div class="scroll"><div class="cfg" id="cfg"></div></div>
     </section>
 
+
+    <!-- ---------- AGENDA ---------- -->
+    <section class="view" id="v-agenda">
+      <div class="viewbar">
+        <div>
+          <h1 class="view-title">Agenda</h1>
+          <div class="view-sub" id="subAgenda">—</div>
+        </div>
+      </div>
+      <div class="scroll">
+        <div class="card" style="margin-bottom:14px" id="cajaCargar">
+          <div class="card-head">
+            <span class="card-t">Por cargar en Doctoralia</span>
+            <span class="card-note" id="notaCargar"></span>
+          </div>
+          <p class="hint" style="margin:0 0 12px">
+            Doctoralia no admite integración, así que estas citas se pasan a mano.
+            Mientras sigan en esta lista, se ven — así ninguna se pierde.
+          </p>
+          <div class="tabla-caja">
+            <table>
+              <thead><tr><th>Paciente</th><th>Teléfono</th><th>Cuándo</th><th>Sede</th><th>Agendada</th><th></th></tr></thead>
+              <tbody id="tablaCargar"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><span class="card-t">Todas las citas</span></div>
+          <div class="tabla-caja">
+            <table>
+              <thead><tr><th>Cuándo</th><th>Paciente</th><th>Teléfono</th><th>Sede</th><th>Tipo</th><th>Estado</th><th></th></tr></thead>
+              <tbody id="tablaCitas"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- CONTENIDO ---------- -->
+    <section class="view" id="v-contenido">
+      <div class="viewbar">
+        <div>
+          <h1 class="view-title">Contenido del consultorio</h1>
+          <div class="view-sub">Precios, horarios, direcciones y franjas. Se edita acá, sin depender del desarrollador.</div>
+        </div>
+      </div>
+      <div class="scroll">
+        <div id="sedesEdit"></div>
+        <div class="card" style="margin-top:14px">
+          <div class="card-head">
+            <span class="card-t">Respuestas frecuentes</span>
+            <button class="btn pequeno" id="nuevaResp" type="button">Agregar</button>
+          </div>
+          <div id="respuestas"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- AUDITORÍA ---------- -->
+    <section class="view" id="v-auditoria">
+      <div class="viewbar">
+        <div>
+          <h1 class="view-title">Registro de actividad</h1>
+          <div class="view-sub">Quién hizo qué y cuándo</div>
+        </div>
+      </div>
+      <div class="scroll">
+        <div class="tabla-caja">
+          <table>
+            <thead><tr><th>Cuándo</th><th>Quién</th><th>Qué hizo</th><th>Detalle</th></tr></thead>
+            <tbody id="tablaAuditoria"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
   </div>
 </div>
 
@@ -494,6 +573,9 @@ tbody tr:hover{background:var(--surface-3)}
     $("#miNombre").textContent = yo.nombre;
     $("#miRol").textContent = yo.rol === "admin" ? "Administrador" : "Asistente";
     $("#miAvatar").textContent = yo.iniciales;
+    // El registro de actividad es solo del doctor. La API también lo
+    // rechaza para la asistente: ocultarlo es comodidad, no seguridad.
+    $("#navAuditoria").classList.toggle("oculto", yo.rol !== "admin");
     $("#fechaHoy").textContent = new Date().toLocaleDateString("es-MX",
       { weekday: "long", day: "numeric", month: "long" });
     await Promise.all([cargarResumen(), cargarLista()]);
@@ -532,9 +614,13 @@ tbody tr:hover{background:var(--surface-3)}
       b.setAttribute("aria-current", "true");
       document.querySelectorAll(".view").forEach((v) => v.classList.remove("on"));
       $("#v-" + b.dataset.vista).classList.add("on");
-      if (b.dataset.vista === "pacientes") cargarPacientes();
-      if (b.dataset.vista === "config") cargarConfig();
-      if (b.dataset.vista === "inicio") cargarResumen();
+      const v = b.dataset.vista;
+      if (v === "pacientes") cargarPacientes();
+      if (v === "config") cargarConfig();
+      if (v === "inicio") cargarResumen();
+      if (v === "agenda") cargarAgenda();
+      if (v === "contenido") cargarContenido();
+      if (v === "auditoria") cargarAuditoria();
     });
   });
 
@@ -573,6 +659,12 @@ tbody tr:hover{background:var(--surface-3)}
     const badge = $("#badge");
     badge.textContent = d.requieren_atencion;
     badge.classList.toggle("oculto", !d.requieren_atencion);
+
+    const bc = $("#badgeCargar");
+    if (bc) {
+      bc.textContent = d.por_cargar || 0;
+      bc.classList.toggle("oculto", !d.por_cargar);
+    }
 
     const tope = Math.max(1, ...d.serie.map((x) => x.conversaciones));
     const barras = d.serie.map((x, i) => `
@@ -909,6 +1001,252 @@ tbody tr:hover{background:var(--surface-3)}
         } catch (e) { avisar(e.message, true); }
       });
     });
+  }
+
+
+  /* ---------------- agenda ---------------- */
+
+  const ESTADO_CITA = {
+    solicitada: ["warn", "Solicitada"],
+    agendada: ["active", "Agendada"],
+    confirmada: ["good", "Confirmada"],
+    cancelada: ["", "Cancelada"],
+    asistio: ["good", "Asistio"],
+    no_asistio: ["critical", "No asistio"],
+    reprogramada: ["warn", "Reprogramada"],
+  };
+
+  async function cargarAgenda() {
+    let porCargar = [], citas = [];
+    try {
+      [porCargar, citas] = await Promise.all([pedir("/por-cargar"), pedir("/citas")]);
+    } catch (e) { return avisar(e.message, true); }
+
+    $("#subAgenda").textContent =
+      citas.length + " citas · " + porCargar.length + " por cargar en Doctoralia";
+    $("#notaCargar").textContent = porCargar.length
+      ? porCargar.length + (porCargar.length === 1 ? " pendiente" : " pendientes")
+      : "Nada pendiente";
+    $("#cajaCargar").style.opacity = porCargar.length ? "1" : ".65";
+
+    $("#tablaCargar").innerHTML = porCargar.length ? porCargar.map(function (c) {
+      return '<tr>' +
+        '<td class="nom">' + esc(c.paciente) + '</td>' +
+        '<td class="tel">' + esc(c.telefono) + '</td>' +
+        '<td>' + esc(c.cuando) + '</td>' +
+        '<td>' + esc(c.sede) + '</td>' +
+        '<td style="color:var(--ink-3)">hace ' + esc(c.agendada_hace) + '</td>' +
+        '<td><button class="btn pequeno primary" data-cargada="' + c.id +
+          '" type="button">Ya la cargué</button></td></tr>';
+    }).join("")
+      : '<tr><td colspan="6" class="vacio">Todo al día. Ninguna cita pendiente de cargar.</td></tr>';
+
+    $("#tablaCitas").innerHTML = citas.length ? citas.map(function (c) {
+      const e = ESTADO_CITA[c.estado] || ["", c.estado];
+      return '<tr' + (c.pasada ? ' style="opacity:.6"' : "") + '>' +
+        '<td class="tel">' + esc(c.cuando) + '</td>' +
+        '<td class="nom">' + esc(c.paciente) + '</td>' +
+        '<td class="tel">' + esc(c.telefono) + '</td>' +
+        '<td>' + esc(c.sede) + '</td>' +
+        '<td class="cap">' + esc(c.tipo) + '</td>' +
+        '<td><span class="pill ' + e[0] + '">' + esc(e[1]) + '</span>' +
+        (c.cargada ? '<span class="pill good" style="margin-left:4px">En Doctoralia</span>' : "") +
+        (c.recordada ? '<span class="pill" style="margin-left:4px">Recordada</span>' : "") +
+        '</td><td style="white-space:nowrap">' +
+        '<a class="btn pequeno" href="' + esc(c.whatsapp_url) +
+          '" target="_blank" rel="noopener">WhatsApp</a>' +
+        (!c.pasada && c.estado !== "cancelada"
+          ? ' <button class="btn pequeno" data-cancelar="' + c.id +
+            '" type="button">Cancelar</button>' : "") +
+        '</td></tr>';
+    }).join("")
+      : '<tr><td colspan="7" class="vacio">Todavía no hay citas.</td></tr>';
+
+    document.querySelectorAll("[data-cargada]").forEach(function (b) {
+      b.addEventListener("click", async function () {
+        try {
+          await pedir("/citas/" + b.dataset.cargada + "/cargada", {
+            method: "POST", body: JSON.stringify({ cargada: true }) });
+          avisar("Marcada como cargada en Doctoralia");
+          cargarAgenda(); cargarResumen();
+        } catch (e) { avisar(e.message, true); }
+      });
+    });
+
+    document.querySelectorAll("[data-cancelar]").forEach(function (b) {
+      b.addEventListener("click", async function () {
+        if (!confirm("¿Cancelar esta cita? El horario queda libre de nuevo.")) return;
+        try {
+          await pedir("/citas/" + b.dataset.cancelar + "/cancelar", { method: "POST" });
+          avisar("Cita cancelada"); cargarAgenda();
+        } catch (e) { avisar(e.message, true); }
+      });
+    });
+  }
+
+  /* ---------------- contenido ---------------- */
+
+  const DIAS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+
+  function bloquesATexto(bloques) {
+    return (bloques || []).map(function (b) {
+      return DIAS[b.dia] + " " + b.desde + "-" + b.hasta;
+    }).join("\n");
+  }
+
+  function textoABloques(texto) {
+    const salida = [];
+    const lineas = (texto || "").split("\n");
+    for (const linea of lineas) {
+      const l = linea.trim();
+      if (!l) continue;
+      const m = l.match(/^(\S+)\s+(\d{1,2}:\d{2})\s*[-a]\s*(\d{1,2}:\d{2})$/i);
+      if (!m) throw new Error("No entendí esta línea: " + l +
+        ". Use el formato: Martes 10:00-12:00");
+      const pref = m[1].toLowerCase().slice(0, 3);
+      const dia = DIAS.findIndex(function (d) { return d.toLowerCase().indexOf(pref) === 0; });
+      if (dia < 0) throw new Error("Día desconocido: " + m[1]);
+      const hh = function (s) { return s.length === 4 ? "0" + s : s; };
+      salida.push({ dia: dia, desde: hh(m[2]), hasta: hh(m[3]) });
+    }
+    return salida;
+  }
+
+  async function cargarContenido() {
+    let sedes, respuestas;
+    try {
+      [sedes, respuestas] = await Promise.all([pedir("/sedes"), pedir("/respuestas")]);
+    } catch (e) { return avisar(e.message, true); }
+
+    $("#sedesEdit").innerHTML = sedes.map(function (s) {
+      return '<div class="card" style="margin-bottom:12px">' +
+        '<div class="card-head"><span class="card-t">' + esc(s.nombre) + '</span>' +
+        (s.completa ? '<span class="pill good">Completa</span>'
+                    : '<span class="pill warn">Faltan datos</span>') +
+        (s.activa ? "" : '<span class="pill">Inactiva</span>') +
+        '</div><div class="cfg" style="gap:10px">' +
+        campo("Dirección", "dir" + s.id, s.direccion) +
+        campo("Referencias para llegar", "ref" + s.id, s.referencias) +
+        campo("Precio de la valoración", "pre" + s.id, s.precio_valoracion || "", "number") +
+        campo("Convenios y aseguradoras", "con" + s.id, s.convenios) +
+        '</div><div class="cfg" style="gap:10px;margin-top:10px">' +
+        area("Horario de atención", "hor" + s.id, bloquesATexto(s.horario),
+             "Una línea por bloque: <b>Martes 09:00-14:00</b>") +
+        area("Franjas reservadas para WhatsApp", "fra" + s.id, bloquesATexto(s.franjas),
+             s.franjas.length
+               ? "Estos horarios los bloquea en Doctoralia y solo los usa el asistente."
+               : "<b>Sin franjas, el asistente no puede agendar en firme.</b>") +
+        '</div><div style="margin-top:12px;display:flex;gap:8px;align-items:center">' +
+        '<button class="btn primary pequeno" data-guardar="' + s.id +
+          '" type="button">Guardar</button>' +
+        '<span class="hint" style="margin:0" id="est' + s.id + '"></span></div></div>';
+    }).join("");
+
+    document.querySelectorAll("[data-guardar]").forEach(function (b) {
+      b.addEventListener("click", async function () {
+        const id = b.dataset.guardar;
+        const est = $("#est" + id);
+        let horario, franjas;
+        try {
+          horario = textoABloques($("#hor" + id).value);
+          franjas = textoABloques($("#fra" + id).value);
+        } catch (e) { est.textContent = e.message; return avisar(e.message, true); }
+
+        const precio = parseFloat($("#pre" + id).value);
+        try {
+          await pedir("/sedes/" + id, { method: "PUT", body: JSON.stringify({
+            direccion: $("#dir" + id).value.trim(),
+            referencias: $("#ref" + id).value.trim(),
+            convenios: $("#con" + id).value.trim(),
+            precio_valoracion: isNaN(precio) ? null : precio,
+            horario_json: horario,
+            franjas_json: franjas,
+          })});
+          est.textContent = "Guardado";
+          avisar("Sede actualizada");
+          setTimeout(cargarContenido, 700);
+        } catch (e) { est.textContent = e.message; avisar(e.message, true); }
+      });
+    });
+
+    $("#respuestas").innerHTML = respuestas.length ? respuestas.map(function (r) {
+      return '<div class="sede" style="align-items:flex-start;flex-direction:column;gap:7px">' +
+        '<div style="display:flex;gap:8px;align-items:center;width:100%">' +
+        '<span class="pill">' + esc(r.intencion) + '</span>' +
+        '<span class="hint" style="margin:0">' + esc(r.disparadores) + '</span>' +
+        '<button class="btn pequeno" style="margin-left:auto" data-borrar="' + r.id +
+          '" type="button">Borrar</button></div>' +
+        '<textarea class="comp-in" style="height:64px;width:100%" data-texto="' + r.id + '">' +
+        esc(r.respuesta) + '</textarea>' +
+        '<button class="btn pequeno" data-guardar-resp="' + r.id +
+          '" type="button">Guardar</button></div>';
+    }).join("")
+      : '<div class="vacio">Sin respuestas cargadas. Agregue las preguntas que más le hacen.</div>';
+
+    document.querySelectorAll("[data-guardar-resp]").forEach(function (b) {
+      b.addEventListener("click", async function () {
+        const id = b.dataset.guardarResp;
+        try {
+          await pedir("/respuestas/" + id, { method: "PUT", body: JSON.stringify({
+            respuesta: document.querySelector('[data-texto="' + id + '"]').value }) });
+          avisar("Respuesta guardada");
+        } catch (e) { avisar(e.message, true); }
+      });
+    });
+
+    document.querySelectorAll("[data-borrar]").forEach(function (b) {
+      b.addEventListener("click", async function () {
+        if (!confirm("¿Borrar esta respuesta?")) return;
+        try {
+          await pedir("/respuestas/" + b.dataset.borrar, { method: "DELETE" });
+          avisar("Respuesta borrada"); cargarContenido();
+        } catch (e) { avisar(e.message, true); }
+      });
+    });
+  }
+
+  function campo(etiqueta, id, valor, tipo) {
+    return '<div><label class="pc-t" for="' + id + '">' + etiqueta + '</label>' +
+      '<input class="comp-in" style="height:auto;width:100%" id="' + id + '"' +
+      (tipo ? ' type="' + tipo + '"' : "") + ' value="' + esc(valor) + '"></div>';
+  }
+
+  function area(etiqueta, id, valor, ayuda) {
+    return '<div><label class="pc-t" for="' + id + '">' + etiqueta + '</label>' +
+      '<textarea class="comp-in" style="height:78px;width:100%" id="' + id + '">' +
+      esc(valor) + '</textarea>' +
+      '<p class="hint" style="margin-top:5px">' + ayuda + '</p></div>';
+  }
+
+  const btnNueva = $("#nuevaResp");
+  if (btnNueva) btnNueva.addEventListener("click", async function () {
+    const texto = prompt("¿Qué debe responder el asistente?");
+    if (!texto) return;
+    const disparadores = prompt("Palabras que la disparan, separadas por coma (opcional)") || "";
+    try {
+      await pedir("/respuestas", { method: "POST", body: JSON.stringify({
+        intencion: "informacion", respuesta: texto, disparadores: disparadores }) });
+      avisar("Respuesta agregada"); cargarContenido();
+    } catch (e) { avisar(e.message, true); }
+  });
+
+  /* ---------------- auditoria ---------------- */
+
+  async function cargarAuditoria() {
+    let filas;
+    try { filas = await pedir("/auditoria"); }
+    catch (e) {
+      $("#tablaAuditoria").innerHTML =
+        '<tr><td colspan="4" class="vacio">Esta sección es solo para el administrador.</td></tr>';
+      return;
+    }
+    $("#tablaAuditoria").innerHTML = filas.length ? filas.map(function (r) {
+      return '<tr><td class="tel">' + esc(r.cuando) + '</td>' +
+        '<td>' + esc(r.actor) + '</td>' +
+        '<td class="cap">' + esc(r.accion.replace(/[._]/g, " ")) + '</td>' +
+        '<td style="color:var(--ink-2)">' + esc(r.detalle) + '</td></tr>';
+    }).join("")
+      : '<tr><td colspan="4" class="vacio">Sin actividad registrada.</td></tr>';
   }
 
   /* ---------------- refresco ---------------- */

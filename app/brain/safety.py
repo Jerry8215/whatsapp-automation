@@ -120,6 +120,18 @@ RESPUESTA_URGENCIAS = (
     "aumenta, no espere la llamada y acuda de inmediato."
 )
 
+#: Fuera de horario NO se puede decir «la contactan», porque a las tres de
+#: la madrugada no hay nadie. Un paciente con signos de alarma que se queda
+#: esperando una llamada que no va a llegar es exactamente el peor
+#: resultado posible de este sistema.
+RESPUESTA_URGENCIAS_FUERA_HORARIO = (
+    "Por lo que me describe, le pido que acuda al servicio de urgencias más "
+    "cercano ahora mismo. No espere a mañana ni a que le respondamos.\n\n"
+    "En este momento el consultorio está cerrado. Dejé su mensaje marcado "
+    "como prioritario y lo verán al abrir, pero no espere por eso: acuda de "
+    "inmediato."
+)
+
 
 # ------------------------------------------------------------------
 #  2. Descripción de síntomas o pedido de opinión clínica  →  DERIVAR
@@ -286,6 +298,18 @@ def evaluar(texto: str, tipo_adjunto: str = "") -> Veredicto:
             )
 
     return Veredicto(Accion.CONTINUAR, Categoria.NINGUNA)
+
+
+def respuesta_para(veredicto: Veredicto, en_horario: bool) -> str:
+    """
+    El texto que corresponde según sea horario de atención o no.
+
+    Solo cambia en el caso de urgencia, y por una razón concreta: fuera de
+    horario no se puede prometer que alguien va a llamar.
+    """
+    if veredicto.accion is Accion.URGENCIAS and not en_horario:
+        return RESPUESTA_URGENCIAS_FUERA_HORARIO
+    return veredicto.respuesta
 
 
 # ------------------------------------------------------------------
