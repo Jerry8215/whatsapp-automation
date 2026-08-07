@@ -50,6 +50,12 @@ aplicacion = FastAPI(
 aplicacion.include_router(webhook_router)
 aplicacion.include_router(panel_router)
 
+# Diagnóstico: consulta el estado de la configuración de Meta desde el
+# servidor, sin necesidad de entrar a la consola. Solo para el administrador.
+from app.diagnostico import router as diagnostico_router  # noqa: E402
+
+aplicacion.include_router(diagnostico_router)
+
 # Simulador: solo fuera de producción. Permite probar el asistente completo
 # sin tener nada configurado en Meta.
 if config.entorno != "produccion":

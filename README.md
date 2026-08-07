@@ -51,6 +51,8 @@ uvicorn app.main:aplicacion --reload
 - **Simulador: <http://localhost:8000/simulador>** — conversar con el
   asistente sin tener nada configurado en Meta
 - Panel: <http://localhost:8000/panel>
+- Diagnóstico de Meta: <http://localhost:8000/diagnostico> — estado de la
+  configuración consultado directamente a Meta, sin entrar a su consola
 - Estado del servicio: <http://localhost:8000/salud>
 - Maqueta aprobada: <http://localhost:8000/maqueta>
 - Documentación de la API: <http://localhost:8000/docs>
@@ -360,6 +362,8 @@ app/
   seed.py              datos iniciales
   demo.py              conversaciones de ejemplo (solo desarrollo)
   simulador.py         chat de prueba sin Meta (solo desarrollo)
+  diagnostico.py       estado de la configuración de Meta vía Graph API
+  arranque.py          preparación previa al despliegue
 
 tests/                 178 pruebas
 ```
