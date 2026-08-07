@@ -23,8 +23,10 @@ respuesta enviada, funcionando contra el número de prueba de Meta.
 | Webhook de WhatsApp con validación de firma | ✅ funcionando |
 | Agenda — Plan B (calendario) | ✅ funcionando |
 | **Panel de control** | ✅ funcionando, con acceso por usuario |
-| Agenda — Plan A (API Doctoralia) | ⏳ esperando credenciales de Docplanner |
-| Recordatorios automáticos | ⏳ Hito 2 |
+| **Recordatorios y ciclo de la cita** | ✅ funcionando |
+| **Zona horaria del consultorio** | ✅ funcionando |
+| Agenda — Plan A (API Doctoralia) | ⏳ esperando respuesta de Docplanner |
+| Plantillas de Meta | ⏳ redactadas, a la espera de acceso para enviarlas |
 
 El número real del consultorio **sigue funcionando normalmente en el
 celular**. Se migra a la API el día 14, en horario de cierre, con el panel
@@ -171,6 +173,57 @@ verifica tanto lo que debe escalar como lo que no.
 
 ---
 
+## Zona horaria
+
+**Se guarda en UTC. Se muestra en la hora del consultorio.** Guadalajara es
+UTC−6 todo el año, sin horario de verano desde 2022.
+
+No es un detalle cosmético: si se mezcla, a un paciente con turno a las
+10:30 le llega un recordatorio que dice 16:30, y la rejilla ofrece espacios
+de madrugada. Es un error que no se ve en desarrollo, porque el servidor de
+pruebas suele estar en UTC, y aparece recién con pacientes reales.
+
+Todo pasa por `app/tiempo.py`. Los horarios de atención («9:00 a 14:00») son
+hora local, así que la rejilla de turnos se arma en local y recién ahí se
+convierte. Cubierto en `tests/test_tiempo.py`.
+
+---
+
+## Recordatorios
+
+Es lo que más ausencias evita, y lo único donde el sistema le escribe
+primero al paciente. Eso implica plantilla aprobada por Meta y costo por
+envío, así que las reglas son estrictas:
+
+- 24 horas antes, con la dirección de **su** sede. En un consultorio con
+  tres ubicaciones, un recordatorio genérico manda al paciente a la
+  dirección equivocada.
+- **Nunca dos veces la misma cita.** Ni para citas canceladas, ni para algo
+  que ya pasó, ni para algo que ocurre en menos de dos horas.
+- Si el envío falla no se marca como enviado: se reintenta en la ronda
+  siguiente.
+
+El paciente responde con botones. **Confirmo** deja la cita confirmada.
+**Necesito reprogramar** ofrece alternativas — y no libera el cupo hasta que
+elija otro, porque cancelar antes es la forma más rápida de dejarlo sin
+ninguno.
+
+Las plantillas están redactadas en `docs/plantillas-whatsapp.md`, listas
+para enviar a aprobación.
+
+### Tareas programadas
+
+| Tarea | Cada | Qué hace |
+|---|---|---|
+| Recordatorios | 15 min | Envía los que corresponden |
+| Mantenimiento | 1 hora | Cierra citas pasadas y conversaciones abandonadas |
+| Retención | 04:30 | Borra historiales vencidos (LFPDPPP) |
+
+Todas se pueden ejecutar dos veces sin causar daño: si el servicio se
+reinicia a mitad de una ronda, la siguiente retoma sin duplicar nada.
+
+---
+
 ## Los tres modos
 
 Se cambian desde el panel, sin reprogramar nada.
@@ -260,10 +313,13 @@ app/
     api.py             API del panel
     static/panel.html  la interfaz
 
+  tiempo.py            zona horaria: se guarda UTC, se muestra local
+  recordatorios.py     recordatorios y ciclo de vida de la cita
+  tareas.py            programador
   seed.py              datos iniciales
   demo.py              conversaciones de ejemplo (solo desarrollo)
 
-tests/                 141 pruebas
+tests/                 166 pruebas
 ```
 
 ---
@@ -301,10 +357,13 @@ individual por persona, aviso de consentimiento en el primer contacto
 - [ ] Plantillas de recordatorio enviadas a aprobación de Meta
 
 **Hito 2 · días 5–9**
+- [x] Recordatorio 24 h con botones de confirmar y reprogramar
+- [x] Cancelación y reprogramación desde WhatsApp
+- [x] Plantillas de Meta redactadas
+- [x] Zona horaria del consultorio
 - [ ] Contenido real del consultorio (precios, horarios, 3 direcciones, convenios)
 - [ ] Criterio de urgencias revisado y firmado por el Dr. Padilla
-- [ ] Recordatorio 24 h con botones de confirmar y reprogramar
-- [ ] Cancelación y reprogramación desde WhatsApp
+- [ ] Plantillas enviadas a aprobación de Meta
 
 **Hito 3 · días 10–14**
 - [x] Panel web, según la maqueta aprobada

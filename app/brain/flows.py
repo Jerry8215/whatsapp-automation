@@ -25,9 +25,8 @@ from app.models import (
     Sede,
 )
 
-DIAS = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
-MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio",
-         "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+from app.tiempo import DIAS, MESES, a_local, ahora_local
+from app.tiempo import fecha_legible as _fecha_legible
 
 
 @dataclass
@@ -54,11 +53,14 @@ SIN_RESOLVER = Salida(resuelto=False)
 # ----------------------------------------------------------------------
 
 def fecha_legible(dt: datetime) -> str:
-    return f"{DIAS[dt.weekday()]} {dt.day} de {MESES[dt.month - 1]}, {dt:%H:%M}"
+    """Recibe UTC (lo que hay en la base) y devuelve hora del consultorio."""
+    return _fecha_legible(dt)
 
 
-def _saludo_por_hora(ahora: datetime | None = None) -> str:
-    h = (ahora or datetime.now()).hour
+def _saludo_por_hora(momento: datetime | None = None) -> str:
+    # La hora del consultorio, no la del servidor: si el servidor está en
+    # Europa, saludaría «buenas tardes» a las siete de la mañana.
+    h = (a_local(momento) if momento else ahora_local()).hour
     if h < 12:
         return "Buenos días"
     if h < 19:

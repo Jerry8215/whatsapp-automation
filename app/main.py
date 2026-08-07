@@ -25,13 +25,18 @@ RAIZ = Path(__file__).resolve().parent.parent
 
 @asynccontextmanager
 async def ciclo_vida(app: FastAPI):
+    from app import tareas
+
     crear_tablas()
     log.info("Base de datos lista")
     log.info("Entorno: %s · agenda: %s · modo: %s",
              config.entorno, config.agenda_proveedor, config.modo_asistente)
     if config.entorno == "produccion" and not config.wa_app_secret:
         log.error("SIN WA_APP_SECRET EN PRODUCCIÓN: el webhook rechazará todo")
+
+    tareas.iniciar()
     yield
+    tareas.detener()
     log.info("Servicio detenido")
 
 

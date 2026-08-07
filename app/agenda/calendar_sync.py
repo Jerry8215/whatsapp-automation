@@ -39,6 +39,7 @@ from app.agenda.base import (
 from app.config import config
 from app.db import sesion
 from app.models import Cita, EstadoCita, Sede
+from app.tiempo import a_local, combinar_local
 
 log = logging.getLogger(__name__)
 
@@ -236,7 +237,14 @@ def _leer_ical(contenido: bytes) -> list[tuple[datetime, datetime]]:
 def _rejilla(
     sede: Sede, desde: datetime, hasta: datetime
 ) -> list[tuple[datetime, datetime]]:
-    """Todos los espacios teóricos de la sede según su horario publicado."""
+    """
+    Todos los espacios teóricos de la sede según su horario publicado.
+
+    `desde` y `hasta` llegan en UTC, y en UTC se devuelve. Pero los horarios
+    de atención («9:00 a 14:00») son HORA DEL CONSULTORIO: hay que armar la
+    rejilla en local y recién ahí convertir. Hacerlo al revés ofrece turnos
+    de madrugada.
+    """
     try:
         bloques = json.loads(sede.horario_json or "[]")
     except json.JSONDecodeError:
@@ -245,14 +253,18 @@ def _rejilla(
 
     duracion = timedelta(minutes=sede.duracion_cita_min or 30)
     salida: list[tuple[datetime, datetime]] = []
-    dia = desde.date()
 
-    while dia <= hasta.date():
+    # Un día de margen a cada lado: el desfase horario puede hacer que un
+    # turno local caiga en otro día en UTC.
+    dia = a_local(desde).date() - timedelta(days=1)
+    ultimo = a_local(hasta).date() + timedelta(days=1)
+
+    while dia <= ultimo:
         for b in bloques:
             if b.get("dia") != dia.weekday():
                 continue
-            abre = datetime.combine(dia, time.fromisoformat(b["desde"]))
-            cierra = datetime.combine(dia, time.fromisoformat(b["hasta"]))
+            abre = combinar_local(dia, time.fromisoformat(b["desde"]))
+            cierra = combinar_local(dia, time.fromisoformat(b["hasta"]))
             t = abre
             while t + duracion <= cierra:
                 if desde <= t <= hasta:
@@ -260,4 +272,4 @@ def _rejilla(
                 t += duracion
         dia += timedelta(days=1)
 
-    return salida
+    return sorted(salida)

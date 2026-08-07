@@ -30,6 +30,7 @@ from app.models import (
     Sede,
     Usuario,
 )
+from app.tiempo import a_local, a_utc, ahora_local, fecha_corta, hace, hora
 from app.panel.auth import (
     autenticar,
     cerrar_sesion,
@@ -55,17 +56,9 @@ def _auditar(usuario: Usuario, accion: str, detalle: str = "", entidad_id: int |
         s.commit()
 
 
-def _hace(dt: datetime | None) -> str:
-    if not dt:
-        return ""
-    seg = (datetime.utcnow() - dt).total_seconds()
-    if seg < 60:
-        return f"{int(seg)} s"
-    if seg < 3600:
-        return f"{int(seg // 60)} min"
-    if seg < 86400:
-        return f"{int(seg // 3600)} h"
-    return f"{int(seg // 86400)} d"
+#: Todas las horas se guardan en UTC y se muestran en hora del consultorio.
+#: Ver app/tiempo.py.
+_hace = hace
 
 
 # ======================================================================
@@ -110,7 +103,10 @@ async def yo(usuario: Usuario = Depends(usuario_actual)) -> dict:
 
 @router.get("/resumen")
 async def resumen(usuario: Usuario = Depends(usuario_actual)) -> dict:
-    hoy = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    # La medianoche del consultorio, no la de UTC. Con UTC, «hoy» se
+    # reiniciaría a las seis de la tarde hora local.
+    inicio_local = ahora_local().replace(hour=0, minute=0, second=0, microsecond=0)
+    hoy = a_utc(inicio_local)
     ayer = hoy - timedelta(days=1)
 
     with sesion() as s:
@@ -179,7 +175,7 @@ async def resumen(usuario: Usuario = Depends(usuario_actual)) -> dict:
             d0 = hoy - timedelta(days=i)
             d1 = d0 + timedelta(days=1)
             serie.append({
-                "dia": ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"][d0.weekday()],
+                "dia": ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"][a_local(d0).weekday()],
                 "conversaciones": s.exec(
                     select(func.count(Conversacion.id)).where(  # type: ignore[arg-type]
                         Conversacion.abierta_en >= d0, Conversacion.abierta_en < d1
@@ -223,8 +219,8 @@ async def resumen(usuario: Usuario = Depends(usuario_actual)) -> dict:
         "proximas_citas": [
             {
                 "id": c.id,
-                "hora": c.inicio.strftime("%H:%M"),
-                "fecha": c.inicio.strftime("%d/%m"),
+                "hora": hora(c.inicio),
+                "fecha": f"{a_local(c.inicio):%d/%m}",
                 "paciente": pacientes[c.paciente_id].nombre or pacientes[c.paciente_id].telefono
                 if c.paciente_id in pacientes else "",
                 "telefono": pacientes[c.paciente_id].telefono if c.paciente_id in pacientes else "",
@@ -339,15 +335,15 @@ async def detalle(
             "motivo_consulta": (p.motivo_consulta or "—") if p else "—",
             "sede_preferida": sede_pref.nombre if sede_pref else "—",
             "es_conocido": bool(p and p.nombre),
-            "alta": p.creado_en.strftime("%d/%m/%Y") if p else "",
+            "alta": f"{a_local(p.creado_en):%d/%m/%Y}" if p else "",
             "ultima_interaccion": _hace(p.ultima_interaccion) if p else "",
         },
         "mensajes": [
             {
                 "quien": m.remitente.value,
                 "texto": m.texto,
-                "hora": m.enviado_en.strftime("%H:%M"),
-                "fecha": m.enviado_en.strftime("%d/%m"),
+                "hora": hora(m.enviado_en),
+                "fecha": f"{a_local(m.enviado_en):%d/%m}",
                 "adjunto": m.tipo_adjunto,
                 "ia": m.generado_por_ia,
             }
@@ -355,7 +351,7 @@ async def detalle(
         ],
         "citas": [
             {
-                "cuando": c2.inicio.strftime("%d/%m/%Y %H:%M"),
+                "cuando": fecha_corta(c2.inicio),
                 "sede": sedes.get(c2.sede_id, ""),
                 "tipo": c2.tipo,
                 "estado": c2.estado.value,
@@ -521,7 +517,7 @@ async def pacientes(
                 "sede": sedes.get(p.sede_preferida_id or 0, "—"),
                 "citas": len([c for c in citas if c.estado is not EstadoCita.CANCELADA]),
                 "ultima": _hace(p.ultima_interaccion),
-                "alta": p.creado_en.strftime("%d/%m/%Y"),
+                "alta": f"{a_local(p.creado_en):%d/%m/%Y}",
                 "conversacion_id": ultima_conv.id if ultima_conv else None,
             })
         return salida
@@ -645,7 +641,7 @@ async def auditoria(usuario: Usuario = Depends(usuario_actual)) -> list[dict]:
             "actor": r.actor,
             "accion": r.accion,
             "detalle": r.detalle,
-            "cuando": r.ocurrido_en.strftime("%d/%m %H:%M"),
+            "cuando": fecha_corta(r.ocurrido_en),
         }
         for r in registros
     ]

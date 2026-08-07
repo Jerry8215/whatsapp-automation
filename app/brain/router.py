@@ -97,6 +97,13 @@ async def _procesar(entrante: MensajeEntrante) -> None:
                  conversacion.id)
         return
 
+    # --- 2b. respuesta a un botón ----------------------------------------
+    # Los botones son entrada estructurada, no texto libre: el paciente
+    # eligió una opción que nosotros le ofrecimos.
+    if entrante.respuesta_id:
+        if await _atender_boton(entrante, paciente, conversacion):
+            return
+
     # --- 3. barrera clínica ---------------------------------------------
     veredicto = safety.evaluar(entrante.texto, entrante.tipo_adjunto)
 
@@ -187,6 +194,122 @@ async def registrar_estado(estado: EstadoEntrega) -> None:
                 accion="mensaje.fallido",
                 detalle=f"{estado.telefono}: {estado.error}",
             ))
+            s.commit()
+
+
+# ======================================================================
+#  Botones
+# ======================================================================
+
+async def _atender_boton(
+    entrante: MensajeEntrante, paciente: Paciente, conversacion: Conversacion
+) -> bool:
+    """
+    Atiende el toque de un botón. Devuelve True si lo resolvió.
+
+    Si el identificador no es de los nuestros, devuelve False y el mensaje
+    sigue el circuito normal — el paciente pudo haber escrito el texto del
+    botón a mano.
+    """
+    from app.recordatorios import responder_boton
+
+    payload = entrante.respuesta_id
+
+    # Botones de la plantilla de recordatorio.
+    respuesta = await responder_boton(paciente.telefono, payload)
+    if respuesta:
+        await _responder(conversacion.id, paciente.telefono, respuesta)
+        _tocar(
+            conversacion.id,
+            intencion=Intencion.CONFIRMAR if "confirm" in payload else Intencion.CANCELAR,
+            paso="cita:elegir_horario" if "reprogram" in payload else "",
+            contexto=_contexto_reprogramacion(paciente) if "reprogram" in payload else {},
+            reiniciar_intentos=True,
+        )
+        return True
+
+    # Botones del flujo de cancelación.
+    if payload == "cancelar":
+        await _cancelar_cita(paciente, conversacion)
+        return True
+
+    if payload == "reprogramar":
+        contexto = _contexto_reprogramacion(paciente)
+        if not contexto.get("sede_id"):
+            await _responder(
+                conversacion.id, paciente.telefono,
+                "No encuentro una cita próxima a su nombre. Permítame "
+                "comunicarla con el consultorio.",
+            )
+            await _escalar(conversacion, paciente, escalation.Decision(
+                escalar=True,
+                motivo=escalation.MotivoEscalado.NO_COMPRENDIDO,
+                aviso="Pidió reprogramar pero no se encontró su cita.",
+            ))
+            return True
+
+        salida = await _buscar_horarios(
+            flows.Salida(contexto=contexto, paso="cita:buscar_horarios"), conversacion
+        )
+        if salida.resuelto and not salida.vacio:
+            await _enviar_salida(conversacion, paciente, salida, Intencion.CANCELAR)
+            return True
+
+    return False
+
+
+def _contexto_reprogramacion(paciente: Paciente) -> dict:
+    from app.recordatorios import _proxima_cita
+
+    cita = _proxima_cita(paciente.telefono)
+    if not cita:
+        return {}
+    return {"sede_id": cita.sede_id, "reprogramando": cita.id}
+
+
+async def _cancelar_cita(paciente: Paciente, conversacion: Conversacion) -> None:
+    from app.agenda.service import cancelar, proveedor
+    from app.recordatorios import _proxima_cita
+
+    cita = _proxima_cita(paciente.telefono)
+    if not cita:
+        await _responder(
+            conversacion.id, paciente.telefono,
+            "No encuentro una cita próxima a su nombre. Permítame comunicarla "
+            "con el consultorio para revisarlo.",
+        )
+        return
+
+    await cancelar(cita.id, por="paciente")  # type: ignore[arg-type]
+
+    texto = (
+        f"Listo, cancelé su cita del {flows.fecha_legible(cita.inicio)}.\n\n"
+        f"Cuando quiera reagendar, escríbame y con gusto le busco un espacio."
+    )
+    await _responder(conversacion.id, paciente.telefono, texto)
+    _marcar_perdida(conversacion.id, "Canceló la cita")
+
+    # Con el Plan B no se puede escribir en Doctoralia: hay que avisarle a
+    # la asistente para que libere el cupo allá.
+    if not proveedor().escribe_en_doctoralia:
+        await avisar(
+            titulo=paciente.nombre or paciente.telefono,
+            cuerpo=(
+                f"Canceló su cita del {flows.fecha_legible(cita.inicio)}. "
+                f"Hay que retirarla de Doctoralia a mano."
+            ),
+            conversacion_id=conversacion.id,
+        )
+
+
+def _marcar_perdida(conversacion_id: int | None, motivo: str) -> None:
+    if conversacion_id is None:
+        return
+    with sesion() as s:
+        c = s.get(Conversacion, conversacion_id)
+        if c and not c.motivo_perdida:
+            c.motivo_perdida = motivo
+            s.add(c)
             s.commit()
 
 
