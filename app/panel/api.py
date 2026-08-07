@@ -61,6 +61,22 @@ def _auditar(usuario: Usuario, accion: str, detalle: str = "", entidad_id: int |
 _hace = hace
 
 
+def _tiene_franjas(sede: Sede) -> bool:
+    """
+    ¿La sede tiene franjas reservadas para WhatsApp?
+
+    Sin ellas el asistente no puede prometer ningún horario, porque no ve la
+    agenda de Doctoralia. El panel lo avisa para que el consultorio las
+    configure.
+    """
+    import json
+
+    try:
+        return bool(json.loads(sede.franjas_json or "[]"))
+    except json.JSONDecodeError:
+        return False
+
+
 # ======================================================================
 #  Sesión
 # ======================================================================
@@ -197,8 +213,11 @@ async def resumen(usuario: Usuario = Depends(usuario_actual)) -> dict:
         1 for c in hoy_convs if c.estado is EstadoConversacion.BOT
     )
 
+    from app.agenda.franjas import citas_por_cargar
+
     return {
         "requieren_atencion": len(atencion),
+        "por_cargar": len(citas_por_cargar()),
         "mas_antigua": _hace(min((c.ultima_actividad for c in atencion), default=None)),
         "conversaciones_hoy": len(hoy_convs),
         "conversaciones_ayer": int(ayer_convs or 0),
@@ -477,6 +496,67 @@ async def responder(
 
 
 # ======================================================================
+#  Citas por cargar en Doctoralia
+# ======================================================================
+
+@router.get("/por-cargar")
+async def por_cargar(usuario: Usuario = Depends(usuario_actual)) -> list[dict]:
+    """
+    Las citas que el asistente agendó y todavía no están en Doctoralia.
+
+    Doctoralia no admite integración (caso MX-03213156), así que la
+    asistente las pasa a mano. Mientras algo siga en esta lista, se ve: es
+    lo que impide que el flujo se convierta en doble gestión de agendas.
+    """
+    from app.agenda.franjas import citas_por_cargar
+
+    citas = citas_por_cargar()
+    with sesion() as s:
+        pacientes = {p.id: p for p in s.exec(select(Paciente)).all()}
+        sedes = {x.id: x.nombre for x in s.exec(select(Sede)).all()}
+
+    salida = []
+    for c in citas:
+        p = pacientes.get(c.paciente_id)
+        salida.append({
+            "id": c.id,
+            "paciente": (p.nombre or p.telefono) if p else "—",
+            "telefono": p.telefono if p else "",
+            "cuando": fecha_corta(c.inicio),
+            "sede": sedes.get(c.sede_id, ""),
+            "tipo": c.tipo,
+            "estado": c.estado.value,
+            "agendada_hace": hace(c.creada_en),
+        })
+    return salida
+
+
+@router.post("/citas/{cita_id}/cargada")
+async def marcar_cargada(
+    cita_id: int,
+    cargada: bool = Body(default=True, embed=True),
+    usuario: Usuario = Depends(usuario_actual),
+) -> dict:
+    with sesion() as s:
+        cita = s.get(Cita, cita_id)
+        if not cita:
+            raise HTTPException(status_code=404, detail="Cita inexistente")
+        cita.cargada_en_doctoralia = cargada
+        cita.cargada_en_doctoralia_en = datetime.utcnow() if cargada else None
+        s.add(cita)
+        s.commit()
+        detalle = f"{fecha_corta(cita.inicio)}"
+
+    _auditar(
+        usuario,
+        "cita.cargada_en_doctoralia" if cargada else "cita.descargada",
+        detalle=detalle,
+        entidad_id=cita_id,
+    )
+    return {"id": cita_id, "cargada": cargada}
+
+
+# ======================================================================
 #  Pacientes — la agenda de contactos del consultorio
 # ======================================================================
 
@@ -553,6 +633,10 @@ async def leer_config(usuario: Usuario = Depends(usuario_actual)) -> dict:
             "proveedor": config.agenda_proveedor,
             "escribe_en_doctoralia": config.agenda_proveedor == "api",
             "traslado_min": config.minutos_traslado_entre_sedes,
+            "sedes_sin_franjas": [
+                x.nombre for x in sedes
+                if x.activa and not _tiene_franjas(x)
+            ],
         },
         "sedes": [
             {

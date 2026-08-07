@@ -41,6 +41,12 @@ SEDES = [
         duracion_cita_min=30,
         # Precio provisional. Lo confirma el consultorio (punto 3 del pedido).
         precio_valoracion=900,
+        # Franjas que el consultorio bloqueará en Doctoralia para WhatsApp.
+        # PROVISIONALES: las define el Dr. Padilla.
+        franjas_json=json.dumps([
+            {"dia": M, "desde": "10:00", "hasta": "12:00"},
+            {"dia": J, "desde": "10:00", "hasta": "12:00"},
+        ]),
         activa=True,
         orden=1,
     ),

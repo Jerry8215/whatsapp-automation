@@ -38,12 +38,17 @@ def proveedor() -> ProveedorAgenda:
             from app.agenda.doctoralia_api import DoctoraliaAPI
 
             _proveedor = DoctoraliaAPI()
-            log.info("Agenda: Plan A — API de Doctoralia")
-        else:
+            log.info("Agenda: API de Doctoralia (descartada el 07/08/2026)")
+        elif config.agenda_proveedor == "calendar":
             from app.agenda.calendar_sync import SincroniaCalendario
 
             _proveedor = SincroniaCalendario()
-            log.info("Agenda: Plan B — sincronización por calendario")
+            log.info("Agenda: sincronización por calendario")
+        else:
+            from app.agenda.franjas import FranjasReservadas
+
+            _proveedor = FranjasReservadas()
+            log.info("Agenda: franjas reservadas para WhatsApp")
     return _proveedor
 
 

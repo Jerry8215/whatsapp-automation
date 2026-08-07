@@ -17,7 +17,7 @@ os.environ["MODO_ASISTENTE"] = "basico"      # sin llamadas a OpenAI
 os.environ["OPENAI_API_KEY"] = ""
 os.environ["WA_TOKEN"] = ""                  # los envíos quedan simulados
 os.environ["WA_PHONE_NUMBER_ID"] = ""
-os.environ["AGENDA_PROVEEDOR"] = "calendar"
+os.environ["AGENDA_PROVEEDOR"] = "franjas"
 os.environ["TELEGRAM_BOT_TOKEN"] = ""
 os.environ["SMTP_HOST"] = ""
 

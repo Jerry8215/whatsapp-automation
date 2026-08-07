@@ -243,10 +243,43 @@ red.
 
 ---
 
-## La agenda: Plan A y Plan B
+## La agenda: franjas reservadas
 
-Doctoralia es la única fuente de verdad. El widget del sitio web, el bot de
-WhatsApp y el consultorio escriben todos sobre la misma agenda.
+El 7 de agosto de 2026 Doctoralia confirmó por escrito (caso MX-03213156)
+que **no ofrece API, no admite integración externa y no permite exportar ni
+sincronizar la agenda**. El asistente no puede ver la disponibilidad real de
+ninguna manera.
+
+Eso deja un problema sin solución técnica: agendar a ciegas sobre una agenda
+compartida choca tarde o temprano con una cita tomada desde el sitio web,
+desde Doctoralia o por la propia asistente.
+
+**La solución es de diseño, no de código.** El consultorio bloquea ciertas
+franjas en Doctoralia y las destina solo a WhatsApp:
+
+```
+Doctoralia          →  todo el horario MENOS las franjas
+Sitio web (widget)  →  todo el horario MENOS las franjas
+Asistente WhatsApp  →  únicamente las franjas
+```
+
+Dentro de esas franjas este sistema es la única fuente de verdad, así que
+**el choque no se detecta: no puede ocurrir**. La cita queda en firme y se le
+confirma al paciente en el momento.
+
+Si una sede no tiene franjas configuradas, el asistente no promete ningún
+horario: toma el pedido y lo confirma una persona. Prometer a ciegas sería
+peor que no prometer nada.
+
+Después, la asistente carga la cita en Doctoralia desde el panel. Mientras
+no lo haga, la cita sigue en su lista de pendientes (`/panel/api/por-cargar`)
+— es lo que impide que esto se convierta en doble gestión de agendas.
+
+---
+
+## Los otros dos proveedores
+
+Se conservan por si la plataforma cambia de política. No se usan hoy.
 
 **Plan A — `AGENDA_PROVEEDOR=api`.** Descartado. El 7 de agosto de 2026
 Doctoralia confirmó por escrito (caso MX-03213156) que no cuenta con API
@@ -309,8 +342,9 @@ app/
 
   agenda/
     base.py            interfaz común
-    doctoralia_api.py  Plan A
-    calendar_sync.py   Plan B
+    franjas.py         ← el que se usa: franjas reservadas
+    doctoralia_api.py  descartado (no hay API)
+    calendar_sync.py   sin uso (no hay exportación de calendario)
     service.py         lo que usa el resto del sistema
 
   panel/
@@ -324,7 +358,7 @@ app/
   seed.py              datos iniciales
   demo.py              conversaciones de ejemplo (solo desarrollo)
 
-tests/                 166 pruebas
+tests/                 176 pruebas
 ```
 
 ---

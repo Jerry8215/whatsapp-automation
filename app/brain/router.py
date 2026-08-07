@@ -318,11 +318,23 @@ def _marcar_perdida(conversacion_id: int | None, motivo: str) -> None:
 # ======================================================================
 
 async def _buscar_horarios(salida: flows.Salida, conversacion: Conversacion) -> flows.Salida:
+    from app.agenda.franjas import hay_franjas
     from app.agenda.service import ofrecer_horarios
+    from app.config import config
 
     sede_id = salida.contexto.get("sede_id")
     if not sede_id:
         return flows.SIN_RESOLVER
+
+    # Sin franjas reservadas el asistente no puede ver la agenda de
+    # Doctoralia ni prometer un horario. Toma el pedido y lo confirma una
+    # persona. Prometer un cupo a ciegas sería peor que no prometer nada.
+    if config.agenda_proveedor == "franjas" and not hay_franjas(sede_id):
+        return flows.Salida(texto=(
+            "Con gusto le agendo. Déjeme confirmar la disponibilidad con el "
+            "consultorio y en un momento le paso el horario.\n\n"
+            "¿Qué días y en qué horario le queda más cómodo?"
+        ), resuelto=False)
 
     huecos = await ofrecer_horarios(sede_id, cantidad=3)
 

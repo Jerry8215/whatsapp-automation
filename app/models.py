@@ -102,6 +102,14 @@ class Sede(SQLModel, table=True):
     # [{"dia": 0, "desde": "09:00", "hasta": "14:00"}, ...]
     horario_json: str = "[]"
     duracion_cita_min: int = 30
+
+    # Franjas que el consultorio bloqueó en Doctoralia y destinó
+    # exclusivamente a WhatsApp. Mismo formato que horario_json.
+    #
+    # Como ningún otro canal puede tomarlas, dentro de estas franjas no
+    # existe posibilidad de choque: el asistente agenda en firme. Es la
+    # respuesta al hecho de que Doctoralia no permite leer la agenda.
+    franjas_json: str = "[]"
     ical_url: str = ""             # Plan B: feed de esa sede
     doctoralia_recurso_id: str = ""  # Plan A: identificador en Doctoralia
     activa: bool = True
@@ -182,6 +190,10 @@ class Cita(SQLModel, table=True):
     externo_id: str = ""           # id en Doctoralia, si lo hay
     recordatorio_enviado_en: Optional[datetime] = None
     confirmada_por_paciente_en: Optional[datetime] = None
+    # Doctoralia no admite integración: la asistente carga la cita a mano.
+    # Mientras esto sea False, la cita aparece en su lista de pendientes.
+    cargada_en_doctoralia: bool = False
+    cargada_en_doctoralia_en: Optional[datetime] = None
     creada_en: datetime = Field(default_factory=ahora)
     creada_por: str = "bot"        # bot | humano | doctoralia
     notas: str = ""

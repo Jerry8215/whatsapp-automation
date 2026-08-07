@@ -30,7 +30,7 @@ class Config(BaseSettings):
     modo_asistente: Literal["basico", "hibrido", "ia"] = "hibrido"
 
     # --- Agenda ---
-    agenda_proveedor: Literal["api", "calendar"] = "calendar"
+    agenda_proveedor: Literal["api", "calendar", "franjas"] = "franjas"
     doctoralia_api_base: str = ""
     doctoralia_api_key: str = ""
     doctoralia_ical_urls: str = ""
