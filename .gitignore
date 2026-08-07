@@ -21,3 +21,6 @@ venv/
 Thumbs.db
 
 *.log
+
+# vistas previas de PDF
+docs/_vista/
