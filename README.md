@@ -48,6 +48,8 @@ python -m app.demo              # conversaciones de ejemplo, para ver el panel c
 uvicorn app.main:aplicacion --reload
 ```
 
+- **Simulador: <http://localhost:8000/simulador>** — conversar con el
+  asistente sin tener nada configurado en Meta
 - Panel: <http://localhost:8000/panel>
 - Estado del servicio: <http://localhost:8000/salud>
 - Maqueta aprobada: <http://localhost:8000/maqueta>
@@ -357,8 +359,9 @@ app/
   tareas.py            programador
   seed.py              datos iniciales
   demo.py              conversaciones de ejemplo (solo desarrollo)
+  simulador.py         chat de prueba sin Meta (solo desarrollo)
 
-tests/                 176 pruebas
+tests/                 178 pruebas
 ```
 
 ---

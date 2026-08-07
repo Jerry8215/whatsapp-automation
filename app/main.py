@@ -50,6 +50,14 @@ aplicacion = FastAPI(
 aplicacion.include_router(webhook_router)
 aplicacion.include_router(panel_router)
 
+# Simulador: solo fuera de producción. Permite probar el asistente completo
+# sin tener nada configurado en Meta.
+if config.entorno != "produccion":
+    from app.simulador import router as simulador_router
+
+    aplicacion.include_router(simulador_router)
+    log.info("Simulador disponible en /simulador")
+
 PANEL = Path(__file__).resolve().parent / "panel" / "static" / "panel.html"
 
 

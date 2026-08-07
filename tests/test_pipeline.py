@@ -216,3 +216,59 @@ async def test_nunca_se_deja_al_paciente_sin_respuesta(telefono):
     await procesar_mensaje(entrante(telefono, "asdkjhasd qwe zzz"))
 
     assert respuestas(telefono), "El paciente quedó sin respuesta"
+
+
+# ----------------------------------------------------------------------
+#  Primer contacto
+# ----------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_al_paciente_nuevo_se_le_presenta_completo(telefono):
+    """
+    WhatsApp entrega el nombre del perfil desde el primer mensaje, pero eso
+    no significa que el consultorio ya lo conozca. Un paciente que escribe
+    por primera vez debe recibir la presentación completa: es el momento en
+    que se genera la confianza.
+    """
+    await procesar_mensaje(entrante(telefono, "Hola"))
+
+    texto = " ".join(respuestas(telefono))
+    assert "Cirujano General" in texto, "No se presentó ante un paciente nuevo"
+
+
+@pytest.mark.asyncio
+async def test_al_paciente_conocido_se_lo_saluda_por_su_nombre(telefono):
+    from datetime import datetime, timedelta
+
+    from app.models import Cita, EstadoCita, Sede
+
+    await procesar_mensaje(entrante(telefono, "Hola"))
+
+    with sesion() as s:
+        p = s.exec(select(Paciente).where(Paciente.telefono == telefono)).first()
+        p.nombre = "Ana López"
+        s.add(p)
+        sede = s.exec(select(Sede).where(Sede.activa)).first()
+        inicio = datetime.utcnow() - timedelta(days=30)
+        s.add(Cita(
+            paciente_id=p.id, sede_id=sede.id,
+            inicio=inicio, fin=inicio + timedelta(minutes=30),
+            estado=EstadoCita.ASISTIO,
+        ))
+        s.commit()
+        # Se cierra la conversación para que el siguiente saludo abra otra.
+        c = s.exec(
+            select(Conversacion)
+            .where(Conversacion.paciente_id == p.id)
+            .order_by(Conversacion.id.desc())
+        ).first()
+        c.cerrada_en = datetime.utcnow()
+        s.add(c)
+        s.commit()
+
+    antes = len(respuestas(telefono))
+    await procesar_mensaje(entrante(telefono, "Buenos días"))
+
+    nuevas = " ".join(respuestas(telefono)[antes:])
+    assert "Ana" in nuevas, "No lo saludó por su nombre"
+    assert "Cirujano General" not in nuevas, "Se volvió a presentar a un paciente conocido"

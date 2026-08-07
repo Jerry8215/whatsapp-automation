@@ -179,9 +179,32 @@ def atender(
             return SIN_RESOLVER
 
 
+def es_recurrente(paciente: Paciente) -> bool:
+    """
+    ¿Este paciente ya tuvo trato con el consultorio?
+
+    Ojo: tener su nombre NO alcanza. WhatsApp nos entrega el nombre del
+    perfil desde el primer mensaje, así que confundir «sé cómo se llama»
+    con «ya lo conozco» hace que a un paciente nuevo se lo salude como si
+    fuera de la casa — y se pierde justo la presentación que genera
+    confianza en el primer contacto.
+    """
+    with sesion() as s:
+        from app.models import Cita
+
+        if s.exec(select(Cita).where(Cita.paciente_id == paciente.id)).first():
+            return True
+        previas = list(s.exec(
+            select(Conversacion).where(Conversacion.paciente_id == paciente.id)
+        ).all())
+        # La actual no cuenta.
+        return len(previas) > 1
+
+
 def _saludo(paciente: Paciente) -> Salida:
     saludo = _saludo_por_hora()
-    if paciente.es_conocido:
+
+    if es_recurrente(paciente) and paciente.nombre:
         nombre = paciente.nombre.split()[0]
         return Salida(
             texto=(
@@ -189,6 +212,8 @@ def _saludo(paciente: Paciente) -> Salida:
                 f"Dr. Padilla. ¿En qué le puedo ayudar?"
             )
         )
+
+    # Primer contacto: la presentación completa.
     return Salida(
         texto=(
             f"{saludo} 👋 Soy el asistente del consultorio del Dr. José "
