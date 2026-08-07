@@ -113,9 +113,11 @@ Qué detecta y qué hace:
 | Pronóstico o promesa de resultados | Deriva al doctor |
 | Cualquier adjunto | Deriva sin abrirlo |
 
-> **Pendiente antes de producción:** el Dr. Padilla debe revisar y firmar la
-> lista de signos de alarma de `safety.py`. El criterio clínico es suyo, no
-> del desarrollador.
+> **Pendiente antes de producción:** el Dr. Padilla debe revisar y firmar el
+> criterio de `docs/criterio-urgencias.md`. El criterio clínico es suyo, no
+> del desarrollador; sus respuestas se traducen directamente a `safety.py` y
+> a `escalation.py`, y el documento firmado queda como constancia de quién
+> lo definió.
 
 Las pruebas de este módulo son bloqueantes: si una falla, el sistema no sale
 a producción.
