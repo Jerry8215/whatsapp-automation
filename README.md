@@ -25,7 +25,7 @@ respuesta enviada, funcionando contra el número de prueba de Meta.
 | **Panel de control** | ✅ funcionando, con acceso por usuario |
 | **Recordatorios y ciclo de la cita** | ✅ funcionando |
 | **Zona horaria del consultorio** | ✅ funcionando |
-| Agenda — Plan A (API Doctoralia) | ⏳ esperando respuesta de Docplanner |
+| Agenda — Plan A (API Doctoralia) | ❌ descartado · Doctoralia confirmó que no hay API |
 | Plantillas de Meta | ⏳ redactadas, a la espera de acceso para enviarlas |
 
 El número real del consultorio **sigue funcionando normalmente en el
@@ -248,8 +248,11 @@ red.
 Doctoralia es la única fuente de verdad. El widget del sitio web, el bot de
 WhatsApp y el consultorio escriben todos sobre la misma agenda.
 
-**Plan A — `AGENDA_PROVEEDOR=api`.** Integración directa. Lectura y
-escritura. Todo automático.
+**Plan A — `AGENDA_PROVEEDOR=api`.** Descartado. El 7 de agosto de 2026
+Doctoralia confirmó por escrito (caso MX-03213156) que no cuenta con API
+pública ni permite integrar una API externa. El módulo
+`app/agenda/doctoralia_api.py` se conserva por si cambian de política, pero
+no se usa en esta entrega.
 
 > **Condicionante del plan contratado.** El consultorio está en plan
 > **Starter** y pasa a **VIP el 11 de agosto de 2026**. El acceso a la API

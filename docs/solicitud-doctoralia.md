@@ -87,9 +87,34 @@ activar el Plan A.
 
 | Fecha | Estado |
 |---|---|
-| Día 1 | Solicitud enviada |
-| 11 de agosto | Entra en vigor el plan VIP — reevaluar qué habilita |
-| | |
+| 5 de agosto de 2026 | Solicitud enviada por el Dr. Padilla |
+| 7 de agosto de 2026 | **Respuesta: no hay API.** Caso MX-03213156 |
+| | Repregunta pendiente sobre exportación de calendario |
 
-Si no hay respuesta en 3 días hábiles, insistir por el chat de soporte de la
-cuenta, que suele responder más rápido que el correo.
+## Respuesta de Doctoralia — 7 de agosto de 2026
+
+Caso **MX-03213156**, respondido por Ángeles Lugo (soporte México):
+
+> «Actualmente, Doctoralia no cuenta con una API pública ni es posible
+> anclar o integrar una API externa para sincronizar la disponibilidad de la
+> agenda con asistentes de WhatsApp u otras herramientas de terceros. Por
+> este motivo, no es posible establecer una conexión que consulte la
+> disponibilidad de su agenda en tiempo real.»
+
+**El Plan A queda descartado.** `app/agenda/doctoralia_api.py` se conserva
+por si la plataforma cambia de política, pero no se va a usar en esta
+entrega.
+
+**Lo que NO respondieron:** la pregunta 4, sobre exportación en iCal o
+sincronización con Google Calendar. Toda su respuesta habla de API, y la
+exportación de calendario no es una API sino una función del producto. Se
+repreguntó por separado, evitando la palabra «API» para no recibir la misma
+respuesta automática.
+
+De esa repregunta dependen dos escenarios muy distintos:
+
+| Si hay exportación de calendario | Si no la hay |
+|---|---|
+| El asistente **lee** la disponibilidad real | El asistente no ve la agenda de Doctoralia |
+| Nunca ofrece un horario ya ocupado | Hace falta reservar franjas para evitar choques |
+| La asistente solo **carga** la cita en Doctoralia | La asistente carga y además vigila colisiones |
