@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import sys
+import time
 
 from sqlmodel import select
 
@@ -20,9 +21,45 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)-7s %(message)s")
 log = logging.getLogger("arranque")
 
 
+INTENTOS_BASE = 10
+ESPERA_SEGUNDOS = 3
+
+
+def _esperar_base() -> None:
+    """
+    Espera a que la base acepte conexiones.
+
+    En el primer despliegue el contenedor suele arrancar antes que
+    PostgreSQL. Sin esto, la aplicación muere al instante y la plataforma
+    la reinicia en bucle, con un error de conexión que parece un problema
+    de configuración y no lo es.
+    """
+    from sqlalchemy import text
+
+    from app.db import motor
+
+    for intento in range(1, INTENTOS_BASE + 1):
+        try:
+            with motor.connect() as conexion:
+                conexion.execute(text("SELECT 1"))
+            if intento > 1:
+                log.info("Base disponible tras %s intentos", intento)
+            return
+        except Exception as e:
+            if intento == INTENTOS_BASE:
+                log.error("La base no respondió tras %s intentos: %s", intento, e)
+                raise
+            log.warning(
+                "La base todavía no responde (intento %s/%s); reintento en %ss",
+                intento, INTENTOS_BASE, ESPERA_SEGUNDOS,
+            )
+            time.sleep(ESPERA_SEGUNDOS)
+
+
 def main() -> int:
     log.info("Entorno: %s · agenda: %s", config.entorno, config.agenda_proveedor)
 
+    _esperar_base()
     crear_tablas()
     log.info("Tablas listas")
 

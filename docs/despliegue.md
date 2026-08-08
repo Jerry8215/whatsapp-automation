@@ -36,6 +36,17 @@ desplegar solo.
 > haría a SQLAlchemy buscar psycopg2 — no instalado, porque el proyecto usa
 > psycopg 3. `app/config.py` la reescribe sola. No hay que tocarla.
 
+> **La base hay que referenciarla.** Agregar PostgreSQL al proyecto no
+> alcanza: en las variables del servicio hay que poner
+> `DATABASE_URL=${{Postgres.DATABASE_URL}}`. Sin eso el servicio arranca con
+> SQLite y pierde todo en cada despliegue. El arranque lo advierte en el
+> registro.
+
+> **Si la plataforma insiste en construir sin el Dockerfile** y falla con
+> `mise ERROR ... No GitHub artifact attestations found for python`, revisar
+> en *Settings → Build* que el constructor sea Dockerfile. Como alternativa,
+> agregar la variable `MISE_PYTHON_GITHUB_ATTESTATIONS=false`.
+
 Variables de entorno mínimas para arrancar:
 
 ```
