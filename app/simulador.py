@@ -9,8 +9,9 @@ de datos, que es donde el sistema las guarda.
 Sirve para probar el asistente completo antes de tocar Meta, y para ver el
 panel actualizarse en vivo mientras se conversa.
 
-**Solo disponible fuera de producción.** El router lo desactiva cuando
-ENTORNO=produccion.
+En desarrollo es de acceso libre. **En producción exige haber iniciado
+sesión en el panel**: no puede quedar abierto a cualquiera que adivine la
+URL, porque crea conversaciones y citas reales.
 """
 
 from __future__ import annotations
@@ -19,8 +20,8 @@ import logging
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Body, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlmodel import select
 
 from app.config import config
@@ -34,13 +35,28 @@ log = logging.getLogger(__name__)
 router = APIRouter(prefix="/simulador", tags=["desarrollo"])
 
 
-def _solo_desarrollo() -> None:
-    if config.entorno == "produccion":
-        raise HTTPException(status_code=404, detail="No disponible")
+def _permitido(request: Request) -> None:
+    """
+    En desarrollo, libre. En producción, hace falta sesión del panel.
+
+    El simulador crea pacientes, conversaciones y citas de verdad: dejarlo
+    abierto permitiría a cualquiera ensuciar los datos del consultorio.
+    """
+    if config.entorno != "produccion":
+        return
+
+    from app.panel.auth import usuario_de_cookie
+
+    if not usuario_de_cookie(request):
+        raise HTTPException(
+            status_code=401,
+            detail="Inicie sesión en el panel para usar el simulador",
+        )
 
 
 @router.post("/mensaje")
 async def enviar(
+    request: Request,
     telefono: str = Body(..., embed=True),
     texto: str = Body(default="", embed=True),
     nombre: str = Body(default="Paciente de prueba", embed=True),
@@ -48,7 +64,7 @@ async def enviar(
     boton: str = Body(default="", embed=True),
 ) -> dict:
     """Mete un mensaje por el circuito real y devuelve lo que respondió."""
-    _solo_desarrollo()
+    _permitido(request)
 
     from app.brain.router import procesar_mensaje
 
@@ -68,15 +84,17 @@ async def enviar(
 
 
 @router.get("/historial")
-async def historial(telefono: str) -> dict:
-    _solo_desarrollo()
+async def historial(request: Request, telefono: str) -> dict:
+    _permitido(request)
     return {"mensajes": _nuevos(telefono, 0), "estado": _estado(telefono)}
 
 
 @router.post("/reiniciar")
-async def reiniciar(telefono: str = Body(..., embed=True)) -> dict:
+async def reiniciar(
+    request: Request, telefono: str = Body(..., embed=True)
+) -> dict:
     """Borra el paciente de prueba y todo su historial."""
-    _solo_desarrollo()
+    _permitido(request)
     from app.models import Cita
 
     with sesion() as s:
@@ -173,8 +191,14 @@ def _estado(telefono: str) -> dict:
 # ======================================================================
 
 @router.get("", response_class=HTMLResponse)
-async def pagina() -> HTMLResponse:
-    _solo_desarrollo()
+async def pagina(request: Request):
+    # Sin sesión se manda al panel a iniciarla, en lugar de mostrar un
+    # error: quien llega acá quiere probar el asistente, no depurar.
+    if config.entorno == "produccion":
+        from app.panel.auth import usuario_de_cookie
+
+        if not usuario_de_cookie(request):
+            return RedirectResponse("/panel", status_code=307)
     return HTMLResponse(PAGINA)
 
 

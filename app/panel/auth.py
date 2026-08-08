@@ -90,6 +90,26 @@ def usuario_actual(
     return usuario
 
 
+def usuario_de_cookie(request) -> Usuario | None:
+    """
+    Igual que `usuario_actual`, pero devuelve None en vez de fallar.
+
+    Se usa fuera de las rutas del panel —el simulador, por ejemplo— donde
+    conviene redirigir al inicio de sesión en lugar de devolver un error.
+    """
+    galleta = request.cookies.get(COOKIE)
+    if not galleta:
+        return None
+    try:
+        datos = jwt.decode(galleta, config.panel_secreto, algorithms=[ALGORITMO])
+    except JWTError:
+        return None
+
+    with sesion() as s:
+        usuario = s.get(Usuario, int(datos.get("sub", 0)))
+    return usuario if usuario and usuario.activo else None
+
+
 def solo_admin(usuario: Usuario) -> Usuario:
     """Configuración y reportes: únicamente el doctor."""
     if usuario.rol is not RolUsuario.ADMIN:

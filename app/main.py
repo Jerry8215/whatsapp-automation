@@ -58,13 +58,13 @@ from app.diagnostico import router as diagnostico_router  # noqa: E402
 
 aplicacion.include_router(diagnostico_router)
 
-# Simulador: solo fuera de producción. Permite probar el asistente completo
-# sin tener nada configurado en Meta.
-if config.entorno != "produccion":
-    from app.simulador import router as simulador_router
+# Simulador. En producción queda detrás de la sesión del panel: sirve para
+# que el consultorio pruebe el asistente antes de que Meta esté configurado,
+# que es justo cuando más falta hace.
+from app.simulador import router as simulador_router  # noqa: E402
 
-    aplicacion.include_router(simulador_router)
-    log.info("Simulador disponible en /simulador")
+aplicacion.include_router(simulador_router)
+log.info("Simulador disponible en /simulador")
 
 PANEL = Path(__file__).resolve().parent / "panel" / "static" / "panel.html"
 
