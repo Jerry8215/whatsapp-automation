@@ -24,8 +24,13 @@ Desde el tablero de Railway, sin instalar nada:
 4. Cargar las variables (abajo) en *Variables*
 5. **Settings → Networking → Generate Domain**
 
-Railway detecta el `Procfile` y usa `runtime.txt`. Cada `git push` vuelve a
+Railway detecta el `Dockerfile` y lo usa. Cada `git push` vuelve a
 desplegar solo.
+
+> **Por qué Dockerfile y no la detección automática.** Con Nixpacks la
+> versión de Python la resuelve el catálogo del proveedor, y un despliegue
+> que funciona hoy puede romperse mañana sin que nadie haya tocado el
+> código. En el Dockerfile la versión está fijada.
 
 > `DATABASE_URL` la inyecta Railway con la forma `postgresql://...`, que
 > haría a SQLAlchemy buscar psycopg2 — no instalado, porque el proyecto usa
