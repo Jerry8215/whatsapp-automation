@@ -16,12 +16,20 @@ número (día 14) se transfiere.
 Railway o Render sirven igual. Ambos dan HTTPS automático, que es lo que
 Meta necesita.
 
-```bash
-# Railway
-railway login
-railway init
-railway up
-```
+Desde el tablero de Railway, sin instalar nada:
+
+1. **railway.app** → entrar con GitHub
+2. **New Project → Deploy from GitHub repo** → elegir el repositorio
+3. **New → Database → PostgreSQL** dentro del mismo proyecto
+4. Cargar las variables (abajo) en *Variables*
+5. **Settings → Networking → Generate Domain**
+
+Railway detecta el `Procfile` y usa `runtime.txt`. Cada `git push` vuelve a
+desplegar solo.
+
+> `DATABASE_URL` la inyecta Railway con la forma `postgresql://...`, que
+> haría a SQLAlchemy buscar psycopg2 — no instalado, porque el proyecto usa
+> psycopg 3. `app/config.py` la reescribe sola. No hay que tocarla.
 
 Variables de entorno mínimas para arrancar:
 

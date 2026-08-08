@@ -52,6 +52,22 @@ class Config(BaseSettings):
     retencion_conversaciones_dias: int = 365
 
     @property
+    def url_base_datos(self) -> str:
+        """
+        La URL de conexión, normalizada.
+
+        Railway, Render y Heroku inyectan `postgresql://...` (o el antiguo
+        `postgres://`). Con esa forma SQLAlchemy busca psycopg2, que no está
+        instalado: este proyecto usa psycopg 3. Se reescribe el esquema para
+        que el despliegue funcione sin tener que tocar nada a mano.
+        """
+        url = self.database_url
+        for viejo in ("postgresql://", "postgres://"):
+            if url.startswith(viejo):
+                return "postgresql+psycopg://" + url[len(viejo):]
+        return url
+
+    @property
     def wa_api_base(self) -> str:
         return f"https://graph.facebook.com/{self.wa_api_version}"
 

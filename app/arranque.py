@@ -47,7 +47,7 @@ def main() -> int:
             log.error("SIN WA_APP_SECRET: el webhook va a rechazar todo")
         if config.panel_secreto in ("cambiar-esto", ""):
             log.error("PANEL_SECRETO sin definir: las sesiones son falsificables")
-        if config.database_url.startswith("sqlite"):
+        if config.url_base_datos.startswith("sqlite"):
             log.warning(
                 "Base SQLite en producción: se pierde en cada despliegue. "
                 "Usar PostgreSQL."

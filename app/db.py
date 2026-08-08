@@ -9,15 +9,15 @@ from sqlmodel import Session, SQLModel, create_engine
 
 from app.config import config
 
-if config.database_url.startswith("sqlite"):
+if config.url_base_datos.startswith("sqlite"):
     Path("datos").mkdir(exist_ok=True)
 
 _conectar_args = (
-    {"check_same_thread": False} if config.database_url.startswith("sqlite") else {}
+    {"check_same_thread": False} if config.url_base_datos.startswith("sqlite") else {}
 )
 
 motor = create_engine(
-    config.database_url,
+    config.url_base_datos,
     echo=False,
     pool_pre_ping=True,
     connect_args=_conectar_args,
