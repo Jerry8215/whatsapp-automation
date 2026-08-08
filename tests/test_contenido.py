@@ -264,3 +264,22 @@ def test_sin_sesion_no_se_ve_el_contenido():
         for ruta in ("/panel/api/sedes", "/panel/api/respuestas",
                      "/panel/api/citas", "/panel/api/por-cargar"):
             assert c.get(ruta).status_code == 401
+
+
+def test_se_puede_renombrar_una_sede(doctor):
+    """
+    Los nombres que crea el `seed` son inventados. El consultorio tiene que
+    poder poner los suyos sin pedirle nada al desarrollador.
+    """
+    with sesion() as s:
+        sede = s.exec(select(Sede)).first()
+        sede_id, original = sede.id, sede.nombre
+
+    r = doctor.put(f"/panel/api/sedes/{sede_id}", json={"nombre": "Consultorio Centro"})
+    assert r.status_code == 200
+    assert "nombre" in r.json()["cambios"]
+
+    with sesion() as s:
+        assert s.get(Sede, sede_id).nombre == "Consultorio Centro"
+        s.get(Sede, sede_id).nombre = original
+        s.commit()

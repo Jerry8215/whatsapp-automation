@@ -1,10 +1,10 @@
 """
 Datos iniciales.  `python -m app.seed`
 
-Las sedes, precios y horarios de aquí son PROVISIONALES: quedan a la
-espera del contenido real del consultorio (punto 3 de lo pedido al Dr.
-Padilla). Sirven para poder probar el circuito completo contra el número
-de prueba de Meta mientras tanto.
+Las sedes, precios y horarios de aquí son PROVISIONALES y están nombrados
+como tales a propósito: si llevaran nombres inventados con aspecto real, el
+consultorio podría creer que son datos suyos mal cargados. Se reemplazan
+desde el panel, en la sección Contenido, sin tocar código.
 """
 
 from __future__ import annotations
@@ -29,7 +29,7 @@ L, M, X, J, V = 0, 1, 2, 3, 4
 
 SEDES = [
     dict(
-        nombre="Torre Médica Providencia",
+        nombre="Sede 1 — por configurar",
         direccion="(pendiente de confirmar con el consultorio)",
         referencias="",
         horarios="Lunes, miércoles y viernes de 9:00 a 14:00",
@@ -51,7 +51,7 @@ SEDES = [
         orden=1,
     ),
     dict(
-        nombre="Hospital Puerta de Hierro",
+        nombre="Sede 2 — por configurar",
         direccion="(pendiente de confirmar con el consultorio)",
         horarios="Martes y jueves de 16:00 a 20:00",
         precio_valoracion=900,
@@ -64,7 +64,7 @@ SEDES = [
         orden=2,
     ),
     dict(
-        nombre="Tercera sede",
+        nombre="Sede 3 — por configurar",
         direccion="(pendiente de confirmar con el consultorio)",
         horarios="",
         horario_json="[]",

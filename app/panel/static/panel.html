@@ -1125,6 +1125,7 @@ tbody tr:hover{background:var(--surface-3)}
                     : '<span class="pill warn">Faltan datos</span>') +
         (s.activa ? "" : '<span class="pill">Inactiva</span>') +
         '</div><div class="cfg" style="gap:10px">' +
+        campo("Nombre de la sede", "nom" + s.id, s.nombre) +
         campo("Dirección", "dir" + s.id, s.direccion) +
         campo("Referencias para llegar", "ref" + s.id, s.referencias) +
         campo("Precio de la valoración", "pre" + s.id, s.precio_valoracion || "", "number") +
@@ -1155,6 +1156,7 @@ tbody tr:hover{background:var(--surface-3)}
         const precio = parseFloat($("#pre" + id).value);
         try {
           await pedir("/sedes/" + id, { method: "PUT", body: JSON.stringify({
+            nombre: $("#nom" + id).value.trim(),
             direccion: $("#dir" + id).value.trim(),
             referencias: $("#ref" + id).value.trim(),
             convenios: $("#con" + id).value.trim(),
