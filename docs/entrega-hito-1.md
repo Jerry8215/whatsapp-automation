@@ -1,4 +1,4 @@
-# Entrega del Hito 1
+﻿# Entrega del Hito 1
 
 Asistente de WhatsApp · Consultorio del Dr. José Guadalupe Padilla
 
@@ -79,12 +79,31 @@ real, con la ficha de contacto y el motivo por el que se derivó cada una.
 - Ficha de contacto de cada paciente y directorio con buscador.
 - Configuración: modo del asistente, medidor de gasto de IA, sedes.
 - Usuario individual por persona y registro de quién hizo qué.
+- **Se instala en el celular**: se agrega a la pantalla de inicio y queda
+  con su propio ícono, a pantalla completa. Nada que bajar de una tienda.
+- **Avisos con sonido** cuando una conversación requiere atención, por
+  push al celular, por Telegram y por correo. Se activan por aparato desde
+  el mismo panel, y hay un botón para probarlos: nadie debería descubrir
+  que no llegaban el día que llega una urgencia real.
 
 **Agenda**
 - Sistema de franjas reservadas (ver más abajo).
 - Respeta el tiempo de traslado entre sus sedes.
 - Recordatorio 24 h antes con la dirección de la sede correcta, y botones
   para confirmar o reprogramar.
+- **Google Calendar, construido y en pausa**, como acordamos. El día que
+  decida dejar Doctoralia, lo activa con un interruptor del panel: ahí el
+  asistente pasa a ver su disponibilidad real y a escribir la cita él mismo,
+  sin lista de pendientes. Se puede volver atrás cuando quiera.
+
+**Si alguien más atiende por otro número**
+- Cuando un paciente escriba a este número pidiendo cita con otra
+  profesional, el asistente lo reconoce y le pasa el número correcto, en
+  lugar de agendarle con usted por error.
+- Lo carga usted desde el panel: nombre, número y cómo la nombran los
+  pacientes. Sin depender de mí.
+- La estructura queda además preparada para sumar un segundo médico con su
+  propia agenda más adelante, tal como habíamos hablado.
 
 **Seguridad**
 - Validación criptográfica de cada mensaje entrante.
@@ -92,7 +111,7 @@ real, con la ficha de contacto y el motivo por el que se derivó cada una.
 - Aviso de consentimiento al primer contacto (LFPDPPP).
 - Ningún dato clínico se almacena.
 
-**176 pruebas automáticas**, todas en verde.
+**392 pruebas automáticas**, todas en verde.
 
 ---
 

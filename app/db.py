@@ -29,6 +29,12 @@ def crear_tablas() -> None:
 
     SQLModel.metadata.create_all(motor)
 
+    # create_all no toca las tablas que ya existen, así que una columna
+    # nueva sobre la base del consultorio hay que agregarla aparte.
+    from app.migraciones import aplicar
+
+    aplicar()
+
 
 def obtener_sesion() -> Iterator[Session]:
     with Session(motor) as sesion:

@@ -33,7 +33,7 @@ TIEMPO_ESPERA = 20.0
 
 
 class DoctoraliaAPI(ProveedorAgenda):
-    escribe_en_doctoralia = True
+    escribe_en_la_agenda = True
 
     def __init__(self) -> None:
         if not config.doctoralia_api_key:

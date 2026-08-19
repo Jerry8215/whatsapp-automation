@@ -8,12 +8,19 @@ Orden fijo, y el orden es lo importante:
     3. BARRERA CLÍNICA                   → antes que todo lo demás
     4. Clasificar intención              (reglas, costo cero)
     5. ¿Hay que escalar?                 → derivar y avisar
-    6. Flujos determinísticos            → resuelto sin costo
-    7. IA, solo si el modo lo permite y hay presupuesto
+   5b. ¿Busca a otro profesional?        → pasarle el número correcto
+    6. LA IA CONVERSA                    → con acceso a la agenda real
+    7. Flujos determinísticos            → modo básico, o si la IA no está
     8. Si nada resolvió                  → derivar a una persona
 
-La IA nunca ve un mensaje que la barrera clínica bloqueó. Ese es el
-invariante del sistema.
+Dos cosas que no se negocian:
+
+**La IA nunca ve un mensaje que la barrera clínica bloqueó.** Ese es el
+invariante del sistema y por eso el paso 3 va antes que el 6.
+
+**Si la IA no está, el asistente sigue funcionando.** Sin clave, sin
+presupuesto o con OpenAI caído, el paso 7 atiende igual. El paciente no se
+entera; el consultorio lo ve en el panel.
 """
 
 from __future__ import annotations
@@ -24,7 +31,7 @@ from datetime import datetime, timedelta
 
 from sqlmodel import select
 
-from app.brain import ai, escalation, flows, intents, safety
+from app.brain import ai, baja, derivacion, escalation, flows, intents, safety
 from app.config import config
 from app.db import sesion
 from app.models import (
@@ -68,11 +75,19 @@ NO_ENTENDI_FUERA_HORARIO = (
 # persona. Derivar cada mensaje que no se entiende satura la bandeja de la
 # asistente, y una bandeja saturada se deja de mirar — con lo cual las
 # derivaciones que sí importan se pierden.
-PEDIR_ACLARACION = (
+#
+# Varias redacciones a propósito: es el mensaje que más se repite, y
+# recibirlo dos veces igual es lo que hace que el paciente sienta que le
+# contesta una grabación.
+PEDIR_ACLARACION = [
     "Disculpe, no estoy segura de haber entendido. ¿Me ayuda diciéndome si "
     "busca agendar una cita, conocer los costos, la ubicación del consultorio, "
-    "o si es otra cosa?"
-)
+    "o si es otra cosa?",
+    "Perdón, creo que no le entendí bien. ¿Me lo puede decir de otra forma? "
+    "Le puedo ayudar con citas, costos, horarios y ubicación.",
+    "Disculpe la insistencia, quiero ayudarle bien. ¿Qué es lo que necesita "
+    "exactamente?",
+]
 
 
 # ======================================================================
@@ -110,6 +125,27 @@ async def _procesar(entrante: MensajeEntrante) -> None:
     if entrante.respuesta_id:
         if await _atender_boton(entrante, paciente, conversacion):
             return
+
+    # --- 2c. baja y alta --------------------------------------------------
+    # Va acá arriba, antes de clasificar, porque «BAJA» es una palabra suelta
+    # que ninguna regla de intención reconoce: terminaba en «no le entendí»
+    # y en la bandeja de la asistente, mientras los recordatorios le seguían
+    # llegando. Es lo que se le promete al paciente en el primer mensaje,
+    # así que tiene que cumplirse antes que cualquier otra cosa.
+    if baja.pide_baja(entrante.texto):
+        nombre = baja.dar_de_baja(paciente.id)  # type: ignore[arg-type]
+        await _responder(conversacion.id, paciente.telefono, baja.CONFIRMACION_BAJA)
+        await avisar(
+            titulo=nombre or paciente.telefono,
+            cuerpo="Pidió la baja: no se le enviarán más recordatorios.",
+            conversacion_id=conversacion.id,
+        )
+        return
+
+    if baja.pide_alta(entrante.texto):
+        baja.dar_de_alta(paciente.id)  # type: ignore[arg-type]
+        await _responder(conversacion.id, paciente.telefono, baja.CONFIRMACION_ALTA)
+        return
 
     # --- 3. barrera clínica ---------------------------------------------
     veredicto = safety.evaluar(entrante.texto, entrante.tipo_adjunto)
@@ -150,7 +186,28 @@ async def _procesar(entrante: MensajeEntrante) -> None:
         await _escalar(conversacion, paciente, decision, abierto=abierto)
         return
 
-    # --- 6. flujos --------------------------------------------------------
+    # --- 5b. ¿busca a otro profesional? ----------------------------------
+    # Va antes de los flujos a propósito: «quiero cita con la doctora»
+    # clasifica como CITA, y sin esto el asistente empezaría a agendarle con
+    # el Dr. Padilla. El paciente se enteraría el día de la consulta.
+    derivado = derivacion.detectar(
+        entrante.texto,
+        intencion_de_cita=(
+            clasificacion.intencion is Intencion.CITA and clasificacion.es_confiable
+        ),
+    )
+    if derivado:
+        await _derivar_a_profesional(conversacion, paciente, derivado, abierto)
+        return
+
+    # --- 6. ¿quién contesta? ----------------------------------------------
+    modo = _modo()
+    if _conviene_la_ia(modo, clasificacion, conversacion):
+        if await _conversar_con_ia(entrante, paciente, conversacion, abierto,
+                                   clasificacion.intencion):
+            return
+
+    # --- 7. flujos --------------------------------------------------------
     salida = flows.atender(
         intencion=clasificacion.intencion if clasificacion.es_confiable else Intencion.DESCONOCIDA,
         texto=entrante.texto,
@@ -168,20 +225,13 @@ async def _procesar(entrante: MensajeEntrante) -> None:
         await _enviar_salida(conversacion, paciente, salida, clasificacion.intencion)
         return
 
-    # --- 7. IA ------------------------------------------------------------
-    if _modo() is not ModoAsistente.BASICO:
-        respuesta_ia = await ai.responder(
-            mensaje=entrante.texto,
-            contexto_consultorio=flows.contexto_para_ia(),
-            contexto_paciente=flows.contexto_paciente(paciente),
-            historial=_historial(conversacion.id),
-        )
-        if respuesta_ia and respuesta_ia.texto:
-            await _responder(
-                conversacion.id, paciente.telefono, respuesta_ia.texto,
-                ia=True, uso=respuesta_ia,
-            )
-            _tocar(conversacion.id, intencion=clasificacion.intencion, reiniciar_intentos=True)
+    # --- 7b. los flujos no pudieron ---------------------------------------
+    # Antes de molestar a una persona, que lo intente la IA. Acá es donde
+    # entra el paciente que preguntó algo que nadie previó — que es la
+    # mayoría de las veces que un asistente de estos queda mal.
+    if modo is not ModoAsistente.BASICO:
+        if await _conversar_con_ia(entrante, paciente, conversacion, abierto,
+                                   clasificacion.intencion):
             return
 
     # --- 8. nadie pudo ----------------------------------------------------
@@ -192,7 +242,10 @@ async def _procesar(entrante: MensajeEntrante) -> None:
     intentos = conversacion.intentos_fallidos + 1
 
     if intentos < escalation.INTENTOS_ANTES_DE_DERIVAR:
-        await _responder(conversacion.id, paciente.telefono, PEDIR_ACLARACION)
+        await _responder(
+            conversacion.id, paciente.telefono,
+            flows.variar(PEDIR_ACLARACION, conversacion),
+        )
         return
 
     await _responder(
@@ -280,6 +333,190 @@ async def _atender_boton(
     return False
 
 
+def _conviene_la_ia(
+    modo: ModoAsistente,
+    clasificacion: intents.Clasificacion,
+    conversacion: Conversacion,
+) -> bool:
+    """
+    ¿Contesta la IA o contestan los flujos?
+
+    Es la regla que define el modo híbrido, y vale la pena explicarla porque
+    de acá sale el ahorro que se le prometió al consultorio.
+
+    Los flujos son gratis y contestan bien la pregunta que alguien previó:
+    el saludo, el precio, la dirección, el horario. Eso es la mayor parte
+    del volumen de un consultorio y no tiene sentido pagarle a un modelo
+    para que lo repita.
+
+    Pero contestan **lo mismo, siempre**. Por eso la IA entra en tres casos:
+
+    1. **No se entendió la intención.** Es el paciente que pregunta algo que
+       nadie previó, y el que peor queda atendido con reglas.
+    2. **Ya se contestó eso antes en esta conversación.** Que vuelva a
+       preguntar significa que la respuesta fija no le sirvió; repetírsela
+       palabra por palabra es lo que hace que se sienta hablando con una
+       grabación.
+    3. **Modo IA**, donde contesta siempre.
+
+    Mientras haya una transacción de agenda en curso mandan los flujos: dos
+    máquinas de estado empujando la misma conversación es una fuente de
+    errores, y esa conversación ya viene con botones enviados.
+    """
+    if modo is ModoAsistente.BASICO:
+        return False
+    if conversacion.paso.startswith("cita:"):
+        return False
+    if modo is ModoAsistente.IA:
+        return True
+
+    if not clasificacion.es_confiable:
+        return True
+    return clasificacion.intencion.value in _ya_resueltas(conversacion)
+
+
+def _ya_resueltas(conversacion: Conversacion) -> list[str]:
+    """Intenciones que los flujos ya contestaron en esta conversación."""
+    try:
+        contexto = json.loads(conversacion.contexto or "{}")
+    except json.JSONDecodeError:
+        return []
+    resueltas = contexto.get("resueltas")
+    return resueltas if isinstance(resueltas, list) else []
+
+
+async def _conversar_con_ia(
+    entrante: MensajeEntrante,
+    paciente: Paciente,
+    conversacion: Conversacion,
+    abierto: bool,
+    intencion: Intencion,
+) -> bool:
+    """
+    Deja que la IA atienda. Devuelve True si resolvió.
+
+    Si devuelve False —sin clave, tope alcanzado, error de red— la
+    conversación sigue por los flujos y el paciente no se entera de nada.
+    Es la red de seguridad que hace que activar la IA no sea un riesgo.
+    """
+    from app.brain.herramientas import Contexto
+
+    respuesta, efecto = await ai.conversar(
+        mensaje=entrante.texto,
+        contexto_consultorio=flows.contexto_para_ia(),
+        contexto_paciente=flows.contexto_paciente(paciente),
+        historial=_historial(conversacion.id),
+        abierto=abierto,
+        dichas=_ya_dicho(conversacion.id),
+        ctx=Contexto(
+            paciente_id=paciente.id,  # type: ignore[arg-type]
+            conversacion_id=conversacion.id,  # type: ignore[arg-type]
+            telefono=paciente.telefono,
+        ),
+    )
+
+    if efecto.cita_creada:
+        _actualizar_paciente(paciente.id, sede_preferida_id=efecto.sede_agendada)
+        _marcar_conversion(conversacion.id)
+
+    # El modelo pidió ayuda humana. La derivación la ejecuta el router: el
+    # modelo puede pedirla, no puede hacerla.
+    if efecto.derivar:
+        texto = (respuesta.texto if respuesta and respuesta.texto else None) or (
+            escalation.MENSAJE_TRANSICION if abierto
+            else escalation.MENSAJE_TRANSICION_FUERA_HORARIO
+        )
+        await _responder(conversacion.id, paciente.telefono, texto,
+                         ia=bool(respuesta), uso=respuesta)
+        await _escalar(conversacion, paciente, escalation.Decision(
+            escalar=True,
+            motivo=escalation.MotivoEscalado.NO_COMPRENDIDO,
+            aviso=efecto.derivar,
+        ), abierto=abierto)
+        return True
+
+    if not respuesta or not respuesta.texto:
+        return False
+
+    await _responder(conversacion.id, paciente.telefono, respuesta.texto,
+                     ia=True, uso=respuesta)
+
+    # El aviso de privacidad va igual, sea quien sea que haya redactado la
+    # respuesta. Es una obligación legal, no una decisión del modelo.
+    if _primer_contacto(conversacion.id):
+        await client.enviar_texto(paciente.telefono, AVISO_CONSENTIMIENTO)
+        _guardar(conversacion.id, Remitente.BOT, AVISO_CONSENTIMIENTO)
+
+    _tocar(conversacion.id, intencion=intencion, paso="", contexto={},
+           reiniciar_intentos=True)
+    return True
+
+
+def _ya_dicho(conversacion_id: int | None, limite: int = 3) -> list[str]:
+    """
+    Lo último que respondió el asistente en esta conversación.
+
+    Se le pasa al modelo para que no conteste dos veces lo mismo con las
+    mismas palabras. Un paciente que recibe el mismo párrafo tres veces
+    concluye —con razón— que está hablando con una grabación.
+    """
+    if conversacion_id is None:
+        return []
+    with sesion() as s:
+        mensajes = list(s.exec(
+            select(Mensaje)
+            .where(
+                Mensaje.conversacion_id == conversacion_id,
+                Mensaje.remitente == Remitente.BOT,
+            )
+            .order_by(Mensaje.enviado_en.desc())  # type: ignore[attr-defined]
+            .limit(limite)
+        ).all())
+    return [m.texto for m in mensajes if m.texto]
+
+
+async def _derivar_a_profesional(
+    conversacion: Conversacion,
+    paciente: Paciente,
+    derivado: derivacion.Derivacion,
+    abierto: bool,
+) -> None:
+    """
+    Le pasa al paciente el número correcto y cierra el tema.
+
+    El agendamiento a medias se descarta: si venía eligiendo horario con el
+    Dr. Padilla y en realidad quería a la otra profesional, dejar el paso
+    abierto haría que su próximo mensaje se interprete como la elección de
+    un horario que ya no quiere.
+    """
+    await _responder(conversacion.id, paciente.telefono, derivado.texto)
+
+    # Sin número cargado no hay nada útil que decirle: lo atiende una persona.
+    if derivacion.configuracion_incompleta(derivado):
+        await _escalar(conversacion, paciente, escalation.Decision(
+            escalar=True,
+            motivo=escalation.MotivoEscalado.NO_COMPRENDIDO,
+            aviso=(
+                f"Pidió cita con {derivado.nombre}, que deriva a otro número, "
+                f"pero ese número no está cargado en el panel."
+            ),
+        ), abierto=abierto)
+        return
+
+    _tocar(conversacion.id, paso="", contexto={}, reiniciar_intentos=True)
+    _marcar_perdida(conversacion.id, f"Buscaba a {derivado.nombre}")
+
+    with sesion() as s:
+        s.add(RegistroAuditoria(
+            actor="bot",
+            accion="conversacion.derivada",
+            entidad="conversacion",
+            entidad_id=conversacion.id,
+            detalle=f"{derivado.nombre} · {derivado.telefono}",
+        ))
+        s.commit()
+
+
 def _contexto_reprogramacion(paciente: Paciente) -> dict:
     from app.recordatorios import _proxima_cita
 
@@ -311,9 +548,9 @@ async def _cancelar_cita(paciente: Paciente, conversacion: Conversacion) -> None
     await _responder(conversacion.id, paciente.telefono, texto)
     _marcar_perdida(conversacion.id, "Canceló la cita")
 
-    # Con el Plan B no se puede escribir en Doctoralia: hay que avisarle a
-    # la asistente para que libere el cupo allá.
-    if not proveedor().escribe_en_doctoralia:
+    # Si el sistema no puede escribir en la agenda —el caso de Doctoralia—
+    # hay que avisarle a la asistente para que libere el cupo allá.
+    if not proveedor().escribe_en_la_agenda:
         await avisar(
             titulo=paciente.nombre or paciente.telefono,
             cuerpo=(
@@ -341,8 +578,7 @@ def _marcar_perdida(conversacion_id: int | None, motivo: str) -> None:
 
 async def _buscar_horarios(salida: flows.Salida, conversacion: Conversacion) -> flows.Salida:
     from app.agenda.franjas import hay_franjas
-    from app.agenda.service import ofrecer_horarios
-    from app.config import config
+    from app.agenda.service import ofrecer_horarios, origen
 
     sede_id = salida.contexto.get("sede_id")
     if not sede_id:
@@ -351,7 +587,9 @@ async def _buscar_horarios(salida: flows.Salida, conversacion: Conversacion) -> 
     # Sin franjas reservadas el asistente no puede ver la agenda de
     # Doctoralia ni prometer un horario. Toma el pedido y lo confirma una
     # persona. Prometer un cupo a ciegas sería peor que no prometer nada.
-    if config.agenda_proveedor == "franjas" and not hay_franjas(sede_id):
+    #
+    # Con Google esto no aplica: ahí sí ve la disponibilidad real.
+    if origen() == "franjas" and not hay_franjas(sede_id):
         return flows.Salida(texto=(
             "Con gusto le agendo. Déjeme confirmar la disponibilidad con el "
             "consultorio y en un momento le paso el horario.\n\n"
@@ -587,11 +825,18 @@ async def _enviar_salida(
         await client.enviar_texto(paciente.telefono, AVISO_CONSENTIMIENTO)
         _guardar(conversacion.id, Remitente.BOT, AVISO_CONSENTIMIENTO)
 
+    # Se anota qué intención acaba de contestar un flujo. Si el paciente la
+    # vuelve a preguntar, la próxima vez contesta la IA en lugar de repetir
+    # el mismo párrafo. Ver `_conviene_la_ia`.
+    resueltas = _ya_resueltas(conversacion)
+    if intencion is not Intencion.DESCONOCIDA and intencion.value not in resueltas:
+        resueltas = resueltas + [intencion.value]
+
     _tocar(
         conversacion.id,
         intencion=intencion,
         paso=salida.paso,
-        contexto=salida.contexto,
+        contexto={**salida.contexto, "resueltas": resueltas},
         reiniciar_intentos=True,
     )
 

@@ -51,7 +51,7 @@ _cache: dict[str, tuple[datetime, list[tuple[datetime, datetime]]]] = {}
 
 
 class SincroniaCalendario(ProveedorAgenda):
-    escribe_en_doctoralia = False
+    escribe_en_la_agenda = False
 
     # ------------------------------------------------------------------
     #  Lectura del feed

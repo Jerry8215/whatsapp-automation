@@ -112,10 +112,54 @@ class Sede(SQLModel, table=True):
     franjas_json: str = "[]"
     ical_url: str = ""             # Plan B: feed de esa sede
     doctoralia_recurso_id: str = ""  # Plan A: identificador en Doctoralia
+    # Plan C: la agenda de Google de esta sede. Vacío = se usa la del
+    # profesional principal. Ver app/agenda/google_calendar.py.
+    calendario_google_id: str = ""
     activa: bool = True
     orden: int = 0
 
     citas: list["Cita"] = Relationship(back_populates="sede")
+
+
+class Profesional(SQLModel, table=True):
+    """
+    Quién atiende. Hoy es uno solo; la tabla existe para que sumar otro sea
+    agregar una fila y no rehacer el sistema.
+
+    Cubre los dos casos que planteó el consultorio:
+
+      * **El Dr. Padilla** (`principal=True`): el asistente le agenda.
+      * **Otro profesional que atiende por su propio número** — la agenda de
+        su esposa, un colega. Con `deriva=True` el asistente NO le agenda:
+        reconoce que el paciente lo busca a él y le pasa el número correcto.
+        Es lo que evita que el número del doctor termine atendiendo dos
+        agendas distintas.
+
+    `calendario_google_id` es la agenda propia de cada quien, para el día que
+    se deje Doctoralia. Ver app/agenda/google_calendar.py.
+    """
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    nombre: str
+    titulo: str = "Dr."                # Dr. | Dra. | Lic.
+    especialidad: str = ""
+    principal: bool = False            # el titular del número de WhatsApp
+
+    # Derivación a otro número
+    deriva: bool = False
+    telefono_whatsapp: str = ""        # el número que se le pasa al paciente
+    # Cómo lo nombran los pacientes, separado por coma: "doctora, su esposa,
+    # dra ramirez". Es lo que dispara el reconocimiento.
+    palabras_clave: str = ""
+    mensaje_derivacion: str = ""       # si se quiere un texto propio
+
+    calendario_google_id: str = ""
+    activo: bool = True
+    orden: int = 0
+
+    @property
+    def nombre_completo(self) -> str:
+        return f"{self.titulo} {self.nombre}".strip()
 
 
 class Paciente(SQLModel, table=True):
@@ -126,6 +170,10 @@ class Paciente(SQLModel, table=True):
     motivo_consulta: str = ""      # categoría administrativa, NO dato clínico
     fuente: str = ""               # google, facebook, doctoralia, web, recomendacion
     consentimiento_en: Optional[datetime] = None
+    # El paciente pidió no recibir más mensajes del consultorio. Se le
+    # promete en el primer contacto («responda BAJA»), así que tiene que
+    # cumplirse: desde acá no sale ningún recordatorio ni plantilla.
+    baja_en: Optional[datetime] = None
     sede_preferida_id: Optional[int] = Field(default=None, foreign_key="sede.id")
     ultima_interaccion: datetime = Field(default_factory=ahora)
     creado_en: datetime = Field(default_factory=ahora)
@@ -183,6 +231,9 @@ class Cita(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     paciente_id: int = Field(foreign_key="paciente.id", index=True)
     sede_id: int = Field(foreign_key="sede.id", index=True)
+    # Con un solo profesional queda en None y nada cambia. Existe para que
+    # sumar un segundo médico no obligue a migrar las citas ya cargadas.
+    profesional_id: Optional[int] = Field(default=None, foreign_key="profesional.id")
     inicio: datetime = Field(index=True)
     fin: datetime
     estado: EstadoCita = Field(default=EstadoCita.SOLICITADA, index=True)
@@ -214,6 +265,30 @@ class Usuario(SQLModel, table=True):
     activo: bool = True
     ultimo_acceso: Optional[datetime] = None
     creado_en: datetime = Field(default_factory=ahora)
+
+
+class SuscripcionPush(SQLModel, table=True):
+    """
+    Un navegador que aceptó recibir avisos de intervención humana.
+
+    Cada persona puede tener varias —el celular y la computadora— y cada una
+    es una suscripción distinta. Guardamos lo que el navegador nos entrega:
+    el endpoint del servicio de envío y las dos claves con las que se cifra
+    el mensaje. No hay nada del paciente aquí.
+
+    Se borra sola: si el servicio de envío responde que el endpoint ya no
+    existe (el usuario desinstaló la app o revocó el permiso), la fila se
+    elimina en el siguiente envío. Ver app/push.py.
+    """
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    usuario_id: int = Field(foreign_key="usuario.id", index=True)
+    endpoint: str = Field(index=True, unique=True)
+    clave_p256dh: str
+    clave_auth: str
+    agente: str = ""               # navegador declarado, para reconocerla
+    creada_en: datetime = Field(default_factory=ahora)
+    ultimo_envio_en: Optional[datetime] = None
 
 
 class RegistroAuditoria(SQLModel, table=True):

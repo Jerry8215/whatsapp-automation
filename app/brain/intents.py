@@ -98,6 +98,13 @@ SENALES: dict[Intencion, list[tuple[str, float]]] = {
         (r"\b(?:que dias|cuando) (?:atiende|atienden|consulta)\b", 0.9),
         (r"\b(?:que|cuales) (?:estudios|documentos|papeles) (?:llevo|necesito|debo llevar)\b", 0.9),
         (r"\b(?:que|cual) (?:especialidad|hace|opera) el (?:dr|doctor)\b", 0.8),
+        # «¿Qué cirugías realiza?» no coincidía con nada y terminaba en «no
+        # le entendí». Es de las primeras preguntas de un paciente nuevo.
+        (r"\bque (?:cirugias|operaciones|procedimientos|padecimientos)\b", 0.9),
+        (r"\b(?:que|cuales) (?:opera|operan|realiza|realizan|atiende|atienden|trata|tratan)\b", 0.8),
+        (r"\b(?:es|son) (?:especialista|cirujano|cirujana)\b", 0.8),
+        (r"\b(?:a que|de que) se dedica\b", 0.8),
+        (r"\bhace (?:cirugia|operaciones)\b", 0.8),
         (r"\b(?:atiende|atienden) (?:ninos|pediatric)\w*\b", 0.8),
         (r"\bpreparacion (?:previa|para la cirugia)\b", 0.8),
     ],

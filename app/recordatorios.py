@@ -104,6 +104,18 @@ async def _enviar_uno(cita_id: int) -> bool:
             log.warning("Cita %s sin paciente o sede; se omite", cita_id)
             return False
 
+        # El paciente pidió que no le escribiéramos. Es lo que se le
+        # prometió en el primer contacto, así que manda por encima de
+        # cualquier recordatorio. La cita sigue en pie; lo que no sale es
+        # el mensaje.
+        if paciente.baja_en:
+            cita.recordatorio_enviado_en = datetime.utcnow()
+            cita.notas = (cita.notas + " · Sin recordatorio: el paciente pidió la baja.").strip(" ·")
+            s.add(cita)
+            s.commit()
+            log.info("Cita %s: el paciente está de baja; no se envía recordatorio", cita_id)
+            return False
+
         nombre = (paciente.nombre or "").split()[0] if paciente.nombre else "paciente"
         telefono = paciente.telefono
         cuando = fecha_legible(cita.inicio)

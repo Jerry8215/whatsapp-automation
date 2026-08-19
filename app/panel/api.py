@@ -609,7 +609,10 @@ async def pacientes(
 
 @router.get("/config")
 async def leer_config(usuario: Usuario = Depends(usuario_actual)) -> dict:
+    from app.agenda.service import origen as origen_de_agenda, proveedor
     from app.brain.ai import consumo_del_mes, tope_alcanzado
+
+    origen_agenda = origen_de_agenda()
 
     with sesion() as s:
         sedes = list(s.exec(select(Sede).order_by(Sede.orden)).all())  # type: ignore[arg-type]
@@ -620,6 +623,10 @@ async def leer_config(usuario: Usuario = Depends(usuario_actual)) -> dict:
     return {
         "modo": ajuste.valor if ajuste else config.modo_asistente,
         "tope_alcanzado": tope_alcanzado(),
+        # Sin clave, el modo que muestra el panel es una intención y no la
+        # realidad: el asistente responde solo con los flujos. Es lo que
+        # hace que «siempre contesta lo mismo» sea invisible desde el panel.
+        "ia_configurada": bool(config.openai_api_key),
         "ia": {
             "gasto": round(consumo.costo_usd, 2),
             "limite": config.ia_limite_mensual_usd,
@@ -630,13 +637,26 @@ async def leer_config(usuario: Usuario = Depends(usuario_actual)) -> dict:
             ),
         },
         "agenda": {
-            "proveedor": config.agenda_proveedor,
-            "escribe_en_doctoralia": config.agenda_proveedor == "api",
+            "proveedor": origen_agenda,
+            "escribe_en_la_agenda": proveedor().escribe_en_la_agenda,
             "traslado_min": config.minutos_traslado_entre_sedes,
             "sedes_sin_franjas": [
                 x.nombre for x in sedes
                 if x.activa and not _tiene_franjas(x)
             ],
+            # Google queda construido y en pausa: se puede activar cuando el
+            # consultorio decida dejar Doctoralia, sin tocar código.
+            "google": {
+                "credenciales": config.google_configurado,
+                "sedes_sin_calendario": [
+                    x.nombre for x in sedes
+                    if x.activa and not (x.calendario_google_id or config.google_calendario_id)
+                ],
+                "listo": config.google_configurado and all(
+                    (x.calendario_google_id or config.google_calendario_id)
+                    for x in sedes if x.activa
+                ),
+            },
         },
         "sedes": [
             {
@@ -709,6 +729,154 @@ async def cambiar_modo(
 
     _auditar(usuario, "modo.cambiado", detalle=valor)
     return {"modo": valor}
+
+
+# ======================================================================
+#  Origen de la agenda
+#
+#  Doctoralia no admite ninguna conexión, así que hoy se trabaja con
+#  franjas reservadas. Google Calendar queda construido y en pausa: el día
+#  que el consultorio decida mudar la agenda, cambia el interruptor y el
+#  asistente pasa a ver la disponibilidad real y a escribir él mismo, sin
+#  que nadie toque código y sin perder nada de lo ya agendado.
+# ======================================================================
+
+@router.put("/agenda/origen")
+async def cambiar_origen_agenda(
+    origen: str = Body(..., embed=True),
+    usuario: Usuario = Depends(usuario_actual),
+) -> dict:
+    from app.agenda.service import ORIGENES, reiniciar_proveedor
+
+    solo_admin(usuario)
+
+    if origen not in ORIGENES:
+        raise HTTPException(status_code=400, detail="Origen de agenda desconocido")
+
+    if origen == "google":
+        # No se deja activar a ciegas: si las credenciales o las agendas no
+        # están, el asistente dejaría de poder agendar en el acto y el
+        # consultorio se enteraría con un paciente esperando.
+        if not config.google_configurado:
+            raise HTTPException(
+                status_code=400,
+                detail="Faltan las credenciales de Google en el servidor.",
+            )
+        from app.agenda.google_calendar import probar_conexion
+
+        prueba = await probar_conexion()
+        if not prueba["ok"]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"La conexión con Google todavía no está lista: {prueba['detalle']}",
+            )
+
+    with sesion() as s:
+        ajuste = s.get(Ajuste, "agenda_origen")
+        if ajuste:
+            ajuste.valor = origen
+            ajuste.actualizado_en = datetime.utcnow()
+        else:
+            ajuste = Ajuste(clave="agenda_origen", valor=origen)
+        s.add(ajuste)
+        s.commit()
+
+    reiniciar_proveedor()
+    _auditar(usuario, "agenda.origen", detalle=origen)
+    return {"origen": origen}
+
+
+@router.get("/agenda/google/prueba")
+async def prueba_google(usuario: Usuario = Depends(usuario_actual)) -> dict:
+    """
+    Comprobar la conexión con Google **antes** de mudar la agenda.
+
+    Devuelve además el correo de la cuenta de servicio, que es lo que el
+    consultorio tiene que agregar a su calendario de Google con permiso para
+    hacer cambios.
+    """
+    from app.agenda.google_calendar import probar_conexion
+
+    solo_admin(usuario)
+    return await probar_conexion()
+
+
+# ======================================================================
+#  Avisos push al celular
+# ======================================================================
+
+@router.get("/push/clave")
+async def clave_push(usuario: Usuario = Depends(usuario_actual)) -> dict:
+    """
+    Lo que el navegador necesita para suscribirse, más cuántos aparatos ya
+    tiene registrados esta persona — así el panel puede decir «activado en
+    este teléfono» en vez de un botón sin estado.
+    """
+    from app.push import suscripciones
+
+    return {
+        "disponible": config.push_configurado,
+        "clave_publica": config.vapid_clave_publica,
+        "aparatos": len(suscripciones(usuario.id)),
+    }
+
+
+@router.post("/push/suscribir")
+async def suscribir_push(
+    endpoint: str = Body(...),
+    p256dh: str = Body(...),
+    auth: str = Body(...),
+    agente: str = Body(""),
+    usuario: Usuario = Depends(usuario_actual),
+) -> dict:
+    from app.push import guardar_suscripcion
+
+    if not config.push_configurado:
+        raise HTTPException(
+            status_code=503,
+            detail="Los avisos push no están configurados en el servidor",
+        )
+    guardar_suscripcion(
+        usuario_id=usuario.id,  # type: ignore[arg-type]
+        endpoint=endpoint,
+        p256dh=p256dh,
+        auth=auth,
+        agente=agente,
+    )
+    _auditar(usuario, "push.activado", detalle=agente[:80])
+    return {"ok": True}
+
+
+@router.post("/push/desuscribir")
+async def desuscribir_push(
+    endpoint: str = Body(..., embed=True),
+    usuario: Usuario = Depends(usuario_actual),
+) -> dict:
+    from app.push import borrar_suscripcion
+
+    borrado = borrar_suscripcion(endpoint)
+    if borrado:
+        _auditar(usuario, "push.desactivado")
+    return {"ok": borrado}
+
+
+@router.post("/push/prueba")
+async def probar_push(usuario: Usuario = Depends(usuario_actual)) -> dict:
+    """
+    Un aviso de prueba, a pedido.
+
+    Existe porque nadie debería descubrir que las notificaciones no llegaban
+    el día que llega una urgencia real.
+    """
+    from app.push import avisar_push
+
+    enviados = await avisar_push(
+        titulo="Aviso de prueba",
+        cuerpo=f"Si ve esto, {usuario.nombre.split()[0]}, los avisos funcionan.",
+        conversacion_id=None,
+        urgente=False,
+    )
+    return {"enviados": enviados}
 
 
 @router.get("/auditoria")

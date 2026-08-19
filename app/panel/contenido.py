@@ -21,6 +21,7 @@ from app.models import (
     Cita,
     Intencion,
     Paciente,
+    Profesional,
     RegistroAuditoria,
     RespuestaFrecuente,
     Sede,
@@ -54,6 +55,7 @@ CAMPOS_EDITABLES = {
     "nombre", "direccion", "referencias", "mapa_url", "telefono",
     "precio_valoracion", "convenios", "horarios", "horario_json",
     "franjas_json", "duracion_cita_min", "activa", "orden",
+    "calendario_google_id",
 }
 
 
@@ -113,6 +115,7 @@ async def listar_sedes(usuario: Usuario = Depends(usuario_actual)) -> list[dict]
             "horario": _leer(x.horario_json),
             "franjas": _leer(x.franjas_json),
             "duracion_cita_min": x.duracion_cita_min,
+            "calendario_google_id": x.calendario_google_id,
             "activa": x.activa,
             "orden": x.orden,
             "completa": bool(
@@ -281,6 +284,177 @@ async def borrar_respuesta(
 
 
 # ======================================================================
+#  Profesionales
+#
+#  Dos usos, una sola tabla:
+#
+#    · El Dr. Padilla — el titular del número. El asistente le agenda.
+#    · Otro profesional que atiende por su propio número (la agenda de su
+#      esposa, un colega). Con «deriva» activado el asistente reconoce que
+#      el paciente lo busca a él y le pasa el número correcto, en vez de
+#      agendarle con el médico equivocado.
+# ======================================================================
+
+CAMPOS_PROFESIONAL = {
+    "nombre", "titulo", "especialidad", "principal", "deriva",
+    "telefono_whatsapp", "palabras_clave", "mensaje_derivacion",
+    "calendario_google_id", "activo", "orden",
+}
+
+
+def _telefono_limpio(crudo: str) -> str:
+    """Solo dígitos y un + inicial. Un número con espacios no es clicable."""
+    t = (crudo or "").strip()
+    if not t:
+        return ""
+    mas = t.startswith("+")
+    digitos = "".join(c for c in t if c.isdigit())
+    return ("+" if mas else "") + digitos
+
+
+def _vista_profesional(p) -> dict:
+    return {
+        "id": p.id,
+        "nombre": p.nombre,
+        "titulo": p.titulo,
+        "nombre_completo": p.nombre_completo,
+        "especialidad": p.especialidad,
+        "principal": p.principal,
+        "deriva": p.deriva,
+        "telefono_whatsapp": p.telefono_whatsapp,
+        "palabras_clave": p.palabras_clave,
+        "mensaje_derivacion": p.mensaje_derivacion,
+        "calendario_google_id": p.calendario_google_id,
+        "activo": p.activo,
+        "orden": p.orden,
+        # Un profesional que deriva sin número cargado no sirve de nada: el
+        # asistente lo reconoce y no tiene qué contestar. El panel lo avisa.
+        "incompleto": bool(p.deriva and p.activo and not p.telefono_whatsapp),
+    }
+
+
+@router.get("/profesionales")
+async def listar_profesionales(usuario: Usuario = Depends(usuario_actual)) -> list[dict]:
+    with sesion() as s:
+        listado = list(s.exec(
+            select(Profesional).order_by(Profesional.orden)  # type: ignore[arg-type]
+        ).all())
+    return [_vista_profesional(p) for p in listado]
+
+
+@router.post("/profesionales")
+async def crear_profesional(
+    datos: dict = Body(...),
+    usuario: Usuario = Depends(usuario_actual),
+) -> dict:
+    solo_admin(usuario)
+
+    nombre = (datos.get("nombre") or "").strip()
+    if not nombre:
+        raise HTTPException(status_code=400, detail="Falta el nombre")
+
+    with sesion() as s:
+        p = Profesional(
+            nombre=nombre,
+            titulo=(datos.get("titulo") or "Dr.").strip(),
+            especialidad=(datos.get("especialidad") or "").strip(),
+            deriva=bool(datos.get("deriva", True)),
+            telefono_whatsapp=_telefono_limpio(datos.get("telefono_whatsapp", "")),
+            palabras_clave=(datos.get("palabras_clave") or "").strip(),
+            mensaje_derivacion=(datos.get("mensaje_derivacion") or "").strip(),
+            calendario_google_id=(datos.get("calendario_google_id") or "").strip(),
+            activo=bool(datos.get("activo", True)),
+            orden=int(datos.get("orden") or 99),
+        )
+        s.add(p)
+        s.commit()
+        s.refresh(p)
+        nuevo = p.id
+
+    _auditar(usuario, "profesional.creado", detalle=nombre, entidad_id=nuevo)
+    return {"id": nuevo}
+
+
+@router.put("/profesionales/{profesional_id}")
+async def editar_profesional(
+    profesional_id: int,
+    datos: dict = Body(...),
+    usuario: Usuario = Depends(usuario_actual),
+) -> dict:
+    solo_admin(usuario)
+
+    with sesion() as s:
+        p = s.get(Profesional, profesional_id)
+        if not p:
+            raise HTTPException(status_code=404, detail="Profesional inexistente")
+
+        cambios = []
+        for clave, valor in datos.items():
+            if clave not in CAMPOS_PROFESIONAL:
+                continue
+            if clave == "telefono_whatsapp":
+                valor = _telefono_limpio(valor)
+            if clave in ("nombre", "titulo") and not str(valor or "").strip():
+                raise HTTPException(status_code=400, detail=f"«{clave}» no puede quedar vacío")
+            if getattr(p, clave) != valor:
+                cambios.append(clave)
+                setattr(p, clave, valor)
+
+        # El titular del número nunca puede derivar a sí mismo: el asistente
+        # le contestaría a un paciente que escriba al número correcto que se
+        # vaya a ese mismo número.
+        if p.principal and p.deriva:
+            raise HTTPException(
+                status_code=400,
+                detail="El profesional principal atiende por este número; no puede derivar.",
+            )
+
+        s.add(p)
+        s.commit()
+        nombre = p.nombre
+
+    if cambios:
+        _auditar(
+            usuario, "profesional.editado",
+            detalle=f"{nombre}: {', '.join(cambios)}",
+            entidad_id=profesional_id,
+        )
+    return {"id": profesional_id, "cambios": cambios}
+
+
+@router.delete("/profesionales/{profesional_id}")
+async def borrar_profesional(
+    profesional_id: int, usuario: Usuario = Depends(usuario_actual)
+) -> dict:
+    solo_admin(usuario)
+
+    with sesion() as s:
+        p = s.get(Profesional, profesional_id)
+        if not p:
+            raise HTTPException(status_code=404, detail="Profesional inexistente")
+        if p.principal:
+            raise HTTPException(
+                status_code=400,
+                detail="No se puede borrar al profesional principal.",
+            )
+        # Se conserva la fila si tiene citas: borrarla dejaría citas
+        # apuntando a nadie. Se desactiva, que es lo que se busca igual.
+        tiene_citas = s.exec(
+            select(Cita).where(Cita.profesional_id == profesional_id)
+        ).first() is not None
+        nombre = p.nombre
+        if tiene_citas:
+            p.activo = False
+            s.add(p)
+        else:
+            s.delete(p)
+        s.commit()
+
+    _auditar(usuario, "profesional.borrado", detalle=nombre, entidad_id=profesional_id)
+    return {"ok": True, "desactivado": tiene_citas}
+
+
+# ======================================================================
 #  Agenda
 # ======================================================================
 
@@ -323,6 +497,142 @@ async def listar_citas(
             "pasada": c.inicio < datetime.utcnow(),
         })
     return salida
+
+
+@router.post("/citas")
+async def registrar_cita(
+    datos: dict = Body(...),
+    usuario: Usuario = Depends(usuario_actual),
+) -> dict:
+    """
+    Registrar una cita que entró por otro lado.
+
+    Es la pieza que hace que el asistente deje de ser ciego. Hasta acá solo
+    conocía las citas que él mismo agendó: una cita tomada por Doctoralia o
+    por teléfono no existía para el sistema, así que no podía confirmarla,
+    ni recordarla, ni reprogramarla, y el paciente que escribía por ella
+    recibía a una persona.
+
+    Con esto, la asistente la carga en segundos y a partir de ese momento el
+    asistente la trata como cualquier otra: recordatorio de 24 horas con la
+    dirección de esa sede, confirmación por WhatsApp y reprogramación.
+
+    No verifica disponibilidad a propósito. No se está pidiendo un lugar: se
+    está registrando algo que ya ocurrió. Si hay superposición se avisa,
+    pero la decisión es del consultorio.
+    """
+    from app.agenda.service import origen as origen_agenda
+    from app.models import Cita, EstadoCita
+    from app.tiempo import a_utc
+
+    telefono = "".join(c for c in str(datos.get("telefono") or "") if c.isdigit())
+    if not telefono:
+        raise HTTPException(status_code=400, detail="Falta el teléfono del paciente")
+
+    try:
+        inicio_local = datetime.fromisoformat(str(datos.get("inicio") or ""))
+    except ValueError:
+        raise HTTPException(status_code=400, detail="La fecha y hora no son válidas")
+
+    #: Lo que escribe una persona es hora del consultorio; lo que se guarda
+    #: es UTC. Mezclarlo manda al paciente seis horas antes o después.
+    inicio = a_utc(inicio_local)
+
+    with sesion() as s:
+        sede = s.get(Sede, int(datos.get("sede_id") or 0))
+        if not sede:
+            raise HTTPException(status_code=404, detail="Sede inexistente")
+        duracion = sede.duracion_cita_min or 30
+        nombre_sede = sede.nombre
+
+    fin = inicio + timedelta(minutes=int(datos.get("duracion_min") or duracion))
+
+    with sesion() as s:
+        paciente = s.exec(select(Paciente).where(Paciente.telefono == telefono)).first()
+        if not paciente:
+            paciente = Paciente(
+                telefono=telefono,
+                nombre=(datos.get("nombre") or "").strip(),
+                fuente=(datos.get("fuente") or "doctoralia").strip(),
+            )
+            s.add(paciente)
+            s.commit()
+            s.refresh(paciente)
+        elif datos.get("nombre") and not paciente.nombre:
+            paciente.nombre = str(datos["nombre"]).strip()
+            s.add(paciente)
+            s.commit()
+        paciente_id = paciente.id
+        nombre_paciente = paciente.nombre or "Paciente"
+
+        choque = s.exec(
+            select(Cita).where(
+                Cita.sede_id == sede.id,
+                Cita.inicio < fin,
+                Cita.fin > inicio,
+                Cita.estado.in_([  # type: ignore[attr-defined]
+                    EstadoCita.SOLICITADA, EstadoCita.AGENDADA, EstadoCita.CONFIRMADA,
+                ]),
+            )
+        ).first()
+
+    if choque and not datos.get("forzar"):
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"Ya hay una cita en {nombre_sede} a esa hora "
+                f"({fecha_corta(choque.inicio)}). Confirme si desea registrarla igual."
+            ),
+        )
+
+    # Con Google como agenda, la cita se escribe también allá: si no, el
+    # asistente la conocería pero la agenda del doctor no.
+    externo_id = ""
+    if origen_agenda() == "google":
+        from app.agenda.google_calendar import registrar_evento
+
+        with sesion() as s:
+            sede_obj = s.get(Sede, int(datos.get("sede_id") or 0))
+        try:
+            externo_id = await registrar_evento(
+                sede=sede_obj, inicio=inicio, fin=fin,
+                nombre_paciente=nombre_paciente, telefono=telefono,
+                motivo=str(datos.get("tipo") or "valoracion"),
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=502,
+                detail=f"No se pudo escribir en Google Calendar: {e}",
+            )
+
+    with sesion() as s:
+        cita = Cita(
+            paciente_id=paciente_id,  # type: ignore[arg-type]
+            sede_id=int(datos.get("sede_id") or 0),
+            inicio=inicio,
+            fin=fin,
+            estado=EstadoCita.AGENDADA,
+            tipo=str(datos.get("tipo") or "valoracion"),
+            externo_id=externo_id,
+            creada_por=usuario.correo,
+            # Vino de Doctoralia: allá ya está. Marcarla como pendiente de
+            # cargar la mandaría a la lista de tareas de la asistente, que
+            # es justo lo contrario de lo que hace falta.
+            cargada_en_doctoralia=True,
+            cargada_en_doctoralia_en=datetime.utcnow(),
+            notas=str(datos.get("notas") or ""),
+        )
+        s.add(cita)
+        s.commit()
+        s.refresh(cita)
+        nueva = cita.id
+
+    _auditar(
+        usuario, "cita.registrada",
+        detalle=f"{nombre_paciente} · {nombre_sede} · {fecha_corta(inicio)}",
+        entidad_id=nueva,
+    )
+    return {"id": nueva, "en_google": bool(externo_id)}
 
 
 @router.post("/citas/{cita_id}/cancelar")

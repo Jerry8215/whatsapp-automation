@@ -80,6 +80,17 @@ def main() -> int:
     # Avisos que conviene ver en el registro del despliegue, no descubrir
     # cuando un paciente escriba.
     if config.entorno == "produccion":
+        # Sin clave el asistente contesta igual, con los flujos, y desde
+        # afuera parece que todo está bien: la única señal es que repite la
+        # misma respuesta ante cualquier pregunta no prevista. Se avisa
+        # fuerte para que no vuelva a pasar inadvertido.
+        if config.modo_asistente != "basico" and not config.openai_api_key:
+            log.error(
+                "MODO «%s» PERO SIN OPENAI_API_KEY: el asistente va a "
+                "funcionar en modo básico y repetirá respuestas fijas ante "
+                "lo que no tenga previsto.",
+                config.modo_asistente,
+            )
         if not config.wa_app_secret:
             log.error("SIN WA_APP_SECRET: el webhook va a rechazar todo")
         if config.panel_secreto in ("cambiar-esto", ""):

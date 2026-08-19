@@ -17,6 +17,7 @@ from app.db import crear_tablas, sesion
 from app.models import (
     Ajuste,
     Intencion,
+    Profesional,
     RespuestaFrecuente,
     RolUsuario,
     Sede,
@@ -112,6 +113,21 @@ def sembrar() -> None:
                 rol=RolUsuario.ASISTENTE,
             ))
             print("  · 2 usuarios creados — CAMBIAR LAS CLAVES ANTES DE PRODUCCIÓN")
+
+        if not s.exec(select(Profesional)).first():
+            # El titular del número. Es el único que se crea: el segundo
+            # profesional lo agrega el consultorio desde el panel, cuando
+            # tenga el número definitivo.
+            s.add(Profesional(
+                nombre="José Guadalupe Padilla",
+                titulo="Dr.",
+                especialidad="Cirugía General y Laparoscópica",
+                principal=True,
+                deriva=False,
+                activo=True,
+                orden=1,
+            ))
+            print("  · profesional principal creado")
 
         if not s.exec(select(RespuestaFrecuente)).first():
             for intencion, disparadores, respuesta in FRECUENTES:

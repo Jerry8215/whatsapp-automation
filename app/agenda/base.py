@@ -5,10 +5,12 @@ Existe porque el acceso a la API de Doctoralia depende de que Docplanner
 lo autorice, y eso no está garantizado. El resto del sistema habla con
 esta interfaz y no le importa cuál de los dos caminos esté activo:
 
-  Plan A — `DoctoraliaAPI`   lectura y escritura directas
-  Plan B — `SincroniaCalendario`  lectura del iCal + citas propias
+  Plan A — `DoctoraliaAPI`        descartado: Doctoralia no tiene API
+  Plan B — `SincroniaCalendario`  sin uso: tampoco exporta la agenda
+  Plan C — `AgendaGoogle`         lectura y escritura reales, listo y en pausa
+  Hoy    — `FranjasReservadas`    el que está activo
 
-Cambiar de uno a otro es una variable de entorno, no una reescritura.
+Cambiar de uno a otro es un interruptor en el panel, no una reescritura.
 """
 
 from __future__ import annotations
@@ -50,10 +52,12 @@ class CupoYaOcupado(ErrorAgenda):
 class ProveedorAgenda(ABC):
     """Contrato que cumplen tanto el Plan A como el Plan B."""
 
-    #: True solo si el proveedor puede ESCRIBIR en Doctoralia.
-    #: Los feeds iCal son de solo lectura: con el Plan B esto es False,
-    #: y por eso ahí las citas nacen como SOLICITADAS.
-    escribe_en_doctoralia: bool = False
+    #: True solo si el proveedor puede ESCRIBIR en la agenda de verdad.
+    #:
+    #: Con las franjas es False: Doctoralia no admite escritura de ninguna
+    #: forma, así que la cita la copia una persona y aparece en la lista de
+    #: pendientes del panel. Con Google es True, y no queda paso manual.
+    escribe_en_la_agenda: bool = False
 
     @abstractmethod
     async def huecos(

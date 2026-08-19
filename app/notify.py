@@ -20,7 +20,14 @@ async def avisar(
     conversacion_id: int | None = None,
     urgente: bool = False,
 ) -> None:
-    """Dispara todos los canales configurados. Nunca levanta excepción."""
+    """
+    Dispara todos los canales configurados. Nunca levanta excepción.
+
+    Los tres salen a la vez y a propósito: el push es el más cómodo pero el
+    sistema operativo del celular puede matarlo, Telegram es el que no
+    falla, y el correo queda como constancia. Un aviso perdido es una
+    conversación que nadie atiende.
+    """
     marca = "🔴 URGENTE" if urgente else "🟡 Requiere atención"
     enlace = (
         f"{config.panel_url_publica}/panel/conversaciones/{conversacion_id}"
@@ -28,8 +35,26 @@ async def avisar(
     )
     texto = f"{marca}\n\n*{titulo}*\n\n{cuerpo}\n\nAbrir: {enlace}"
 
+    await _push(titulo=titulo, cuerpo=cuerpo,
+                conversacion_id=conversacion_id, urgente=urgente)
     await _telegram(texto)
     _correo(f"{marca} — {titulo}", f"{cuerpo}\n\nAbrir: {enlace}")
+
+
+async def _push(
+    *, titulo: str, cuerpo: str, conversacion_id: int | None, urgente: bool
+) -> None:
+    from app.push import avisar_push
+
+    try:
+        await avisar_push(
+            titulo=titulo,
+            cuerpo=cuerpo,
+            conversacion_id=conversacion_id,
+            urgente=urgente,
+        )
+    except Exception:
+        log.exception("No se pudo enviar el aviso push")
 
 
 async def _telegram(texto: str) -> None:

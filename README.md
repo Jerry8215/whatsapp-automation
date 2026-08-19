@@ -1,4 +1,4 @@
-# Asistente de WhatsApp — Consultorio Dr. José Guadalupe Padilla
+﻿# Asistente de WhatsApp — Consultorio Dr. José Guadalupe Padilla
 
 Cirugía General y Laparoscópica · Guadalajara
 
@@ -10,8 +10,10 @@ una persona cuando hace falta criterio humano.
 
 ## Estado
 
-**Fase 1 · Hito 1 — en curso.** Circuito completo de mensaje entrante a
-respuesta enviada, funcionando contra el número de prueba de Meta.
+**Fase 1 — software completo.** Circuito entero, de mensaje entrante a cita
+agendada, funcionando contra el número de prueba de Meta. Lo único que falta
+para entregar es el acceso a Meta y el contenido del consultorio: no queda
+nada por programar.
 
 | Componente | Estado |
 |---|---|
@@ -29,6 +31,9 @@ respuesta enviada, funcionando contra el número de prueba de Meta.
 | **Agenda y citas por cargar** | ✅ funcionando |
 | **Registro de actividad** | ✅ funcionando |
 | **Zona horaria del consultorio** | ✅ funcionando |
+| **App instalable y avisos push** | ✅ funcionando |
+| **Derivación a otro profesional** | ✅ funcionando |
+| **Agenda — Plan C (Google Calendar)** | ✅ construido y en pausa |
 | Agenda — Plan A (API Doctoralia) | ❌ descartado · Doctoralia confirmó que no hay API |
 | Plantillas de Meta | ⏳ redactadas, a la espera de acceso para enviarlas |
 
@@ -88,13 +93,19 @@ router.py
    ├─ 3.  BARRERA CLÍNICA  (safety.py)          → antes que todo lo demás
    ├─ 4.  Clasificar intención  (intents.py)    reglas, costo cero
    ├─ 5.  ¿Escalar?  (escalation.py)            → derivar y avisar
-   ├─ 6.  Flujos  (flows.py)                    resuelto sin costo
-   ├─ 7.  IA  (ai.py)                           solo si el modo lo permite
+   ├─ 5b. ¿Busca a otro profesional?            → pasarle el número correcto
+   ├─ 6.  LA IA CONVERSA  (ai.py)               con la agenda real en la mano
+   ├─ 7.  Flujos  (flows.py)                    modo básico, o si la IA no está
    └─ 8.  Si nada resolvió                      → derivar a una persona
 ```
 
-**El invariante del sistema:** la IA nunca ve un mensaje que la barrera
-clínica bloqueó.
+**Dos invariantes:**
+
+La IA **nunca** ve un mensaje que la barrera clínica bloqueó. Por eso el
+paso 3 va antes que el 6.
+
+Si la IA no está —sin clave, sin presupuesto, con OpenAI caído— el paso 7
+atiende igual. El paciente no se entera; el consultorio lo ve en el panel.
 
 ---
 
@@ -154,9 +165,29 @@ abrir el chat en WhatsApp o copiar el número.
 **Pacientes** — el directorio de contactos del consultorio, con buscador
 por nombre o teléfono.
 
-**Agenda** — todas las citas y, sobre todo, la lista de **por cargar en
-Doctoralia**: la tarea diaria de la asistente. Mientras una cita siga ahí,
-se ve; así ninguna se pierde.
+**Agenda** — todas las citas, la lista de **por cargar en Doctoralia** —la
+tarea diaria de la asistente— y el **registro de citas que entraron por
+Doctoralia**.
+
+Ese último punto es el que hace que el asistente deje de ser ciego. Hasta
+que existió, el sistema solo conocía las citas que él mismo había agendado:
+una cita tomada por Doctoralia no existía para él, así que no podía
+confirmarla, no le mandaba el recordatorio de 24 horas, y el paciente que
+escribía por ella terminaba derivado a una persona. Como la mayoría de las
+citas de un consultorio entran por ahí, el recordatorio —lo que más
+ausencias evita— cubría a una minoría.
+
+Ahora la asistente la carga en segundos y el asistente la trata como
+cualquier otra. Con Google activo, además se escribe en la agenda de
+Google: una sola agenda, completa.
+
+No verifica disponibilidad a propósito. No se está pidiendo un lugar: se
+está registrando algo que ya ocurrió. Si hay superposición avisa, pero la
+decisión es del consultorio.
+
+**Probar el asistente** — el simulador, dentro del panel. Estaba disponible
+en `/simulador` pero no había forma de llegar desde la interfaz, así que el
+consultorio no lo encontraba.
 
 **Contenido** — precios, direcciones, horarios, franjas reservadas y
 respuestas frecuentes. Lo edita el consultorio sin depender del
@@ -168,6 +199,47 @@ dejaría al asistente sin poder ofrecer turnos, y sería un fallo silencioso.
 interruptor de sedes, cambio de contraseña y quién tiene acceso.
 
 **Registro de actividad** — quién hizo qué y cuándo. Solo el doctor.
+
+### En el celular
+
+El panel se agrega a la pantalla de inicio y queda con su propio ícono, a
+pantalla completa y sin barra de navegador. No hay nada que descargar de
+una tienda.
+
+Los avisos de intervención humana salen por **tres canales a la vez**, y es
+a propósito:
+
+| Canal | Para qué | Se configura |
+|---|---|---|
+| Push al celular | El más cómodo: suena en el momento | Desde el panel, en Configuración |
+| Telegram | El que no falla | `TELEGRAM_BOT_TOKEN` |
+| Correo | Constancia | `SMTP_*` |
+
+El push depende de que el sistema operativo no haya matado la suscripción,
+así que **no reemplaza a Telegram**: un aviso perdido es una conversación
+que nadie atiende. Si un canal falla, los otros salen igual —
+`tests/test_push.py` lo verifica.
+
+Se activa por aparato: el celular de la asistente y el del doctor se
+registran por separado, y el panel muestra cuántos hay. Una urgencia queda
+en pantalla hasta que alguien la abra; el resto se descarta solo.
+
+> **En iPhone hay un paso previo.** Apple solo permite avisos si la app está
+> agregada a la pantalla de inicio (iOS 16.4+). El panel lo detecta y
+> explica el paso en lugar de mostrar un botón que no haría nada.
+
+Las claves de envío se generan una sola vez:
+
+```bash
+python -m scripts.generar_claves_vapid   # → VAPID_* en el .env
+python -m scripts.generar_iconos         # solo si cambian los colores
+```
+
+Sin claves configuradas el panel no ofrece la opción y los avisos siguen
+saliendo por Telegram y correo. Nada se rompe.
+
+Nada clínico viaja en el aviso: nombre del paciente, motivo administrativo y
+el enlace. El aviso pasa por un servicio de terceros; el contenido no.
 
 Sobre los permisos: la asistente ve y responde conversaciones; solo el
 doctor cambia el modo, activa sedes y consulta la auditoría. Cada persona
@@ -262,15 +334,53 @@ Cubierto en `tests/test_fuera_horario.py`.
 
 ---
 
-## Los tres modos
+## Cómo conversa
+
+El asistente entiende cómo escribe la gente de verdad: sin acentos, con
+faltas, en audio transcrito, a medias. «oiga y si me urge hay chance hoy?»
+no está en ningún catálogo de respuestas, y es exactamente el mensaje que
+llega un martes a las once de la noche.
+
+Además de hablar, **hace**: consulta la disponibilidad real, reserva,
+cancela y deriva, con las herramientas de `app/brain/herramientas.py`. El
+modelo decide *cuándo*; el código decide *qué pasa*.
+
+Tres garantías, cubiertas en `tests/test_ia.py`:
+
+- **Una alucinación no se convierte en cita.** Si el modelo pide agendar un
+  horario que no existe, el proveedor de agenda lo rechaza igual que
+  rechazaría a un paciente. No hay camino entre inventar y la agenda del
+  doctor.
+- **El modelo no escribe en la base.** Pide una acción; el router la aplica.
+  Derivar y marcar una conversión los decide el código.
+- **Si OpenAI se cae, el paciente recibe respuesta igual.** Contestan los
+  flujos y no se entera nadie más que el consultorio.
+
+### Los tres modos
 
 Se cambian desde el panel, sin reprogramar nada.
 
 | Modo | Qué hace | Costo |
 |---|---|---|
 | `basico` | Solo flujos. Lo que no reconoce, lo deriva. | cero |
-| `hibrido` | Flujos para lo común; la IA solo entra en lo no previsto. | ~80% menos |
+| `hibrido` | Los flujos contestan lo previsto; la IA, todo lo demás. | ~80% menos |
 | `ia` | IA en todas las respuestas. | mayor |
+
+**Qué define el modo híbrido**, que es de donde sale el ahorro: el saludo,
+el precio, la dirección y el horario los contestan los flujos, gratis. La
+IA entra cuando (a) no se entendió la intención, o (b) **el paciente ya
+había preguntado eso mismo en esta conversación**.
+
+Ese segundo caso importa más de lo que parece. Que alguien vuelva a
+preguntar significa que la respuesta fija no le sirvió; repetírsela palabra
+por palabra es lo que hace que sienta que habla con una grabación. Ahí
+cuesta unas milésimas de dólar y vale cada una.
+
+> **Sin `OPENAI_API_KEY` el sistema queda en modo básico aunque el panel
+> diga «híbrido».** Funciona, contesta y agenda — pero repite la misma
+> respuesta ante cualquier pregunta que no estuviera prevista. Es lo primero
+> que hay que revisar si el consultorio reporta que «siempre contesta lo
+> mismo».
 
 **Tope de gasto mensual con caída automática.** Al alcanzar
 `IA_LIMITE_MENSUAL_USD`, el sistema pasa solo a modo básico y avisa. Nunca
@@ -310,6 +420,79 @@ peor que no prometer nada.
 Después, la asistente carga la cita en Doctoralia desde el panel. Mientras
 no lo haga, la cita sigue en su lista de pendientes (`/panel/api/por-cargar`)
 — es lo que impide que esto se convierta en doble gestión de agendas.
+
+---
+
+## Plan C — Google Calendar: construido y en pausa
+
+Las franjas son la mejor respuesta posible a una plataforma cerrada, pero
+siguen dejando un paso manual y limitan al asistente a un pedazo del
+horario. Google Calendar sí tiene API, así que el camino de salida está
+construido y esperando.
+
+| | Doctoralia (franjas) | Google Calendar |
+|---|---|---|
+| Ve la disponibilidad real | No | **Sí** |
+| Escribe la cita | La copia una persona | **El asistente** |
+| Horarios que puede ofrecer | Solo las franjas | **Todo el horario** |
+| Lista de «por cargar» | Todos los días | **Vacía** |
+
+Se activa con un interruptor en **Configuración → De dónde sale la agenda**.
+No hay que tocar código, no se rehace nada y las citas ya tomadas se
+conservan. La marcha atrás está siempre disponible y no depende de que
+Google responda.
+
+Antes de dejar activarlo, el panel prueba la conexión sede por sede:
+activarla a ciegas dejaría al asistente sin poder agendar en el acto.
+
+Se conecta con una **cuenta de servicio** —un usuario técnico del
+consultorio, no una cuenta personal— y lee la disponibilidad con `freeBusy`,
+que devuelve solo los rangos ocupados, sin títulos ni invitados. En el
+evento se escribe nombre, teléfono, sede y motivo administrativo: nada
+clínico, igual que en el resto del sistema.
+
+Configuración paso a paso en **`docs/google-calendar.md`**.
+
+---
+
+## Cuando el paciente busca a otro profesional
+
+Hoy una sola asistente lleva la agenda del Dr. Padilla y la de su esposa
+desde el mismo número. Al separarlas, los pacientes que ya tienen este
+número guardado van a seguir escribiendo acá para pedirle cita a ella.
+
+Sin nada que lo contemple, esos pacientes quedarían agendados con el médico
+equivocado —y se enterarían el día de la consulta.
+
+`app/brain/derivacion.py` lo reconoce y le pasa el número correcto:
+
+> Este número atiende la agenda del Dr. José Guadalupe Padilla.
+> Para la Dra. Ana Ramírez la agenda se lleva por otro número: 📱 …
+
+Se administra desde **Contenido → Otros profesionales**: nombre, número y
+cómo lo nombran los pacientes («doctora», «su esposa»). El apellido se
+reconoce siempre, aunque no se cargue como palabra clave.
+
+Tres decisiones que vale la pena explicar:
+
+- **Es una regla, no una interpretación.** Funciona igual en modo básico,
+  sin IA, y mandar mal un número es un error que el paciente paga con un
+  viaje perdido.
+- **No basta con nombrarla.** «La doctora me recomendó operarme» es un
+  mensaje para el Dr. Padilla. Se exige además un contexto de consulta, o
+  que la intención ya venga clasificada como cita. Un paciente desviado por
+  error es un paciente perdido.
+- **No se reenvía nada.** Se le dice a dónde escribir. Pasar mensajes de un
+  número a otro sin que el paciente lo sepa es peor que decirle a dónde ir.
+
+Si alguien queda cargado sin número, el asistente no inventa: deriva a una
+persona y el panel marca esa ficha como incompleta.
+
+Cubierto en `tests/test_derivacion.py`, en las dos direcciones.
+
+La misma tabla `Profesional` es la que deja el sistema **preparado para
+varios médicos**, tal como se acordó: sumar al Dr. B más adelante es agregar
+una fila con su agenda de Google, no rehacer el modelo de datos.
 
 ---
 
@@ -372,13 +555,16 @@ app/
     safety.py          ← barrera clínica
     intents.py         clasificación por reglas
     escalation.py      cuándo pasa a una persona
+    derivacion.py      cuando buscan a otro profesional
     flows.py           respuestas determinísticas
-    ai.py              OpenAI con tope de gasto
+    ai.py              ← la que conversa: OpenAI con tope de gasto
+    herramientas.py    lo que la IA puede hacer: agenda, reserva, deriva
     router.py          el circuito completo
 
   agenda/
     base.py            interfaz común
     franjas.py         ← el que se usa: franjas reservadas
+    google_calendar.py Plan C: construido y en pausa
     doctoralia_api.py  descartado (no hay API)
     calendar_sync.py   sin uso (no hay exportación de calendario)
     service.py         lo que usa el resto del sistema
@@ -388,7 +574,12 @@ app/
     api.py             API del panel
     contenido.py       edición de contenido, agenda y contraseña
     static/panel.html  la interfaz
+    static/sw.js       service worker: avisos push y apertura sin señal
+    static/manifest.webmanifest   la app instalable
+    static/iconos/     el ícono de la pantalla de inicio
 
+  push.py              avisos push al celular (VAPID)
+  migraciones.py       columnas nuevas sobre una base que ya tiene datos
   tiempo.py            zona horaria: se guarda UTC, se muestra local
   recordatorios.py     recordatorios y ciclo de vida de la cita
   tareas.py            programador
@@ -398,7 +589,7 @@ app/
   diagnostico.py       estado de la configuración de Meta vía Graph API
   arranque.py          preparación previa al despliegue
 
-tests/                 219 pruebas
+tests/                 392 pruebas
 ```
 
 ---
@@ -423,35 +614,48 @@ individual por persona, aviso de consentimiento en el primer contacto
 
 ---
 
-## Pendientes por hito
+## Qué falta
 
-**Hito 1 · días 1–4**
+**El software está completo.** Todo lo que sigue depende de un tercero —
+Meta, o el contenido que tiene que dar el consultorio. No hay nada más que
+programar para entregar la Fase 1.
+
+**Construido y probado** — 392 pruebas en verde
+
 - [x] Estructura, modelo de datos, webhook con validación de firma
 - [x] Barrera clínica, intenciones, escalado, flujos
-- [x] Capa de IA con tope de gasto
-- [x] Agenda Plan B
-- [ ] Solicitud de acceso a la API ante Docplanner — **enviar el día 1**
-- [ ] App de Meta y número de prueba
-- [ ] Servidor desplegado en cuenta del consultorio
-- [ ] Plantillas de recordatorio enviadas a aprobación de Meta
-
-**Hito 2 · días 5–9**
+- [x] Capa de IA con tope de gasto y caída automática a modo básico
+- [x] Agenda por franjas reservadas, con margen de traslado entre sedes
 - [x] Recordatorio 24 h con botones de confirmar y reprogramar
 - [x] Cancelación y reprogramación desde WhatsApp
-- [x] Plantillas de Meta redactadas
 - [x] Zona horaria del consultorio
-- [ ] Contenido real del consultorio (precios, horarios, 3 direcciones, convenios)
-- [ ] Criterio de urgencias revisado y firmado por el Dr. Padilla
-- [ ] Plantillas enviadas a aprobación de Meta
+- [x] Panel web según la maqueta aprobada, con toma de control y métricas
+- [x] Acceso por usuario, permisos por rol y auditoría visible
+- [x] App instalable en el celular y avisos push
+- [x] Derivación al número de otro profesional
+- [x] Google Calendar como agenda propia, construido y en pausa
+- [x] Plantillas de recordatorio redactadas
 
-**Hito 3 · días 10–14**
-- [x] Panel web, según la maqueta aprobada
-- [x] Toma de control y bandeja de pendientes
-- [x] Métricas y ficha de contacto del paciente
-- [x] Acceso por usuario, permisos por rol y auditoría
-- [ ] Auditoría visible en pantalla
-- [ ] Capacitación del personal
+**Depende de Meta** — es el camino crítico
+
+- [ ] Invitación en Meta Business con acceso limitado sobre la cuenta de WhatsApp
+- [ ] Constancia de Situación Fiscal, para la verificación del negocio
+- [ ] Plantillas enviadas a aprobación (Meta puede tardar 48 h)
 - [ ] **Migración del número real** — último paso, en horario de cierre
+
+**Depende del consultorio**
+
+- [ ] Contenido real: precios, horarios, 3 direcciones, convenios
+- [ ] Franjas reservadas de cada sede
+- [ ] Criterio de urgencias revisado y firmado por el Dr. Padilla
+- [ ] Capacitación del personal
+
+**Del lado del servidor, al desplegar en la cuenta del consultorio**
+
+- [ ] `PANEL_SECRETO` y `WA_APP_SECRET` definidos
+- [ ] Claves VAPID generadas (`python -m scripts.generar_claves_vapid`)
+- [ ] PostgreSQL en lugar de SQLite
+- [ ] Google Calendar: opcional, solo si se decide mudar la agenda
 
 ---
 

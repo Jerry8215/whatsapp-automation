@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from pathlib import Path
 
@@ -66,7 +66,53 @@ from app.simulador import router as simulador_router  # noqa: E402
 aplicacion.include_router(simulador_router)
 log.info("Simulador disponible en /simulador")
 
-PANEL = Path(__file__).resolve().parent / "panel" / "static" / "panel.html"
+ESTATICOS = Path(__file__).resolve().parent / "panel" / "static"
+PANEL = ESTATICOS / "panel.html"
+
+
+# ----------------------------------------------------------------------
+#  App instalable en el celular
+#
+#  El consultorio agrega el panel a la pantalla de inicio y le queda un
+#  ícono como cualquier otra app, a pantalla completa. Los tres archivos
+#  van en la raíz a propósito: el service worker solo puede controlar
+#  páginas que estén por debajo de su propia ruta, y desde /panel/sw.js no
+#  alcanzaría a la raíz del sitio.
+# ----------------------------------------------------------------------
+
+@aplicacion.get("/manifest.webmanifest", include_in_schema=False)
+async def manifiesto() -> FileResponse:
+    return FileResponse(
+        ESTATICOS / "manifest.webmanifest",
+        media_type="application/manifest+json",
+    )
+
+
+@aplicacion.get("/sw.js", include_in_schema=False)
+async def service_worker() -> FileResponse:
+    return FileResponse(
+        ESTATICOS / "sw.js",
+        media_type="application/javascript",
+        # Sin esto el navegador puede quedarse con un service worker viejo
+        # y el panel no se actualiza nunca.
+        headers={"Cache-Control": "no-cache", "Service-Worker-Allowed": "/"},
+    )
+
+
+@aplicacion.get("/iconos/{nombre}", include_in_schema=False)
+async def icono(nombre: str) -> FileResponse:
+    archivo = (ESTATICOS / "iconos" / nombre).resolve()
+    if archivo.parent != (ESTATICOS / "iconos").resolve() or not archivo.is_file():
+        raise HTTPException(status_code=404, detail="No existe")
+    return FileResponse(archivo, media_type="image/png")
+
+
+@aplicacion.get("/apple-touch-icon.png", include_in_schema=False)
+@aplicacion.get("/apple-touch-icon-precomposed.png", include_in_schema=False)
+async def icono_apple() -> FileResponse:
+    """iOS lo busca en la raíz, sin preguntarle al manifiesto."""
+    return FileResponse(ESTATICOS / "iconos" / "apple-touch-icon.png",
+                        media_type="image/png")
 
 
 @aplicacion.get("/panel", include_in_schema=False)
@@ -85,12 +131,25 @@ async def salud() -> JSONResponse:
     from app.brain.ai import consumo_del_mes, tope_alcanzado
 
     consumo = consumo_del_mes()
+
+    # `configurada` existe porque su ausencia es un fallo silencioso: sin
+    # clave el asistente sigue contestando, pero solo con los flujos, y
+    # desde afuera parece que funciona bien. Se ve acá y en el panel.
+    configurada = bool(config.openai_api_key)
+    efectivo = (
+        "basico" if (tope_alcanzado() or not configurada)
+        else config.modo_asistente
+    )
+
     return JSONResponse({
         "estado": "ok",
         "entorno": config.entorno,
         "agenda": config.agenda_proveedor,
-        "modo": "basico" if tope_alcanzado() else config.modo_asistente,
+        "modo": efectivo,
+        "modo_configurado": config.modo_asistente,
         "ia": {
+            "configurada": configurada,
+            "modelo": config.openai_model if configurada else "",
             "gasto_usd": round(consumo.costo_usd, 4),
             "limite_usd": config.ia_limite_mensual_usd,
             "tope_alcanzado": tope_alcanzado(),

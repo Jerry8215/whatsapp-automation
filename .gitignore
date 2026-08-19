@@ -24,3 +24,10 @@ Thumbs.db
 
 # vistas previas de PDF
 docs/_vista/
+
+# Conversaciones con el cliente y paginas guardadas de la plataforma.
+# Tienen datos personales y el historial completo de la negociacion: no
+# van al repositorio, ni siquiera si es privado.
+1.txt
+WORKANA*
+*_files/

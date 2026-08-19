@@ -30,11 +30,19 @@ class Config(BaseSettings):
     modo_asistente: Literal["basico", "hibrido", "ia"] = "hibrido"
 
     # --- Agenda ---
-    agenda_proveedor: Literal["api", "calendar", "franjas"] = "franjas"
+    agenda_proveedor: Literal["api", "calendar", "franjas", "google"] = "franjas"
     doctoralia_api_base: str = ""
     doctoralia_api_key: str = ""
     doctoralia_ical_urls: str = ""
     minutos_traslado_entre_sedes: int = 45
+
+    # Google Calendar. Se conecta con una cuenta de servicio: el consultorio
+    # comparte su agenda con ese correo y le da permiso de hacer cambios. No
+    # hay que iniciar sesión con la cuenta personal del doctor ni renovar
+    # nada a mano.
+    google_cuenta_servicio_json: str = ""   # el JSON completo, o una ruta a él
+    google_calendario_id: str = ""          # agenda por defecto
+    google_zona_horaria: str = ""           # vacío → la del consultorio
 
     # --- Avisos ---
     telegram_bot_token: str = ""
@@ -44,6 +52,13 @@ class Config(BaseSettings):
     smtp_usuario: str = ""
     smtp_clave: str = ""
     correo_avisos: str = ""
+
+    # Avisos push al celular. Sin claves configuradas el panel no ofrece la
+    # opción y los avisos siguen saliendo por Telegram y correo.
+    # Se generan una sola vez con: python -m scripts.generar_claves_vapid
+    vapid_clave_publica: str = ""
+    vapid_clave_privada: str = ""
+    vapid_contacto: str = ""       # mailto:... exigido por los navegadores
 
     # --- Panel ---
     panel_secreto: str = "cambiar-esto"
@@ -82,6 +97,18 @@ class Config(BaseSettings):
     @property
     def correos_aviso(self) -> list[str]:
         return [c.strip() for c in self.correo_avisos.split(",") if c.strip()]
+
+    @property
+    def push_configurado(self) -> bool:
+        return bool(self.vapid_clave_publica and self.vapid_clave_privada)
+
+    @property
+    def google_configurado(self) -> bool:
+        return bool(self.google_cuenta_servicio_json)
+
+    @property
+    def zona_google(self) -> str:
+        return self.google_zona_horaria or self.zona_horaria
 
 
 @lru_cache

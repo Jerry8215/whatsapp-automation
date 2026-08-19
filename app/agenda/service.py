@@ -29,33 +29,68 @@ from app.models import Cita, EstadoCita, Paciente, RegistroAuditoria, Sede
 log = logging.getLogger(__name__)
 
 _proveedor: ProveedorAgenda | None = None
+_origen_activo: str = ""
+
+#: Los orígenes de agenda que el consultorio puede elegir desde el panel.
+#: `api` y `calendar` no están: Doctoralia confirmó que no existen para su
+#: cuenta, y ofrecerlos sería ofrecer algo que no funciona.
+ORIGENES = ("franjas", "google")
+
+
+def origen() -> str:
+    """
+    De dónde sale la agenda hoy.
+
+    Se guarda en la base y no en el entorno, porque es una decisión del
+    consultorio y no del despliegue: el día que dejen Doctoralia, cambian el
+    interruptor del panel y listo. Google queda construido y en pausa hasta
+    entonces, tal como se acordó.
+    """
+    from app.models import Ajuste
+
+    with sesion() as s:
+        ajuste = s.get(Ajuste, "agenda_origen")
+    valor = ajuste.valor if ajuste else config.agenda_proveedor
+    return valor if valor in ("franjas", "google", "api", "calendar") else "franjas"
 
 
 def proveedor() -> ProveedorAgenda:
-    global _proveedor
-    if _proveedor is None:
-        if config.agenda_proveedor == "api":
-            from app.agenda.doctoralia_api import DoctoraliaAPI
+    global _proveedor, _origen_activo
 
-            _proveedor = DoctoraliaAPI()
-            log.info("Agenda: API de Doctoralia (descartada el 07/08/2026)")
-        elif config.agenda_proveedor == "calendar":
-            from app.agenda.calendar_sync import SincroniaCalendario
+    elegido = origen()
+    if _proveedor is not None and _origen_activo == elegido:
+        return _proveedor
 
-            _proveedor = SincroniaCalendario()
-            log.info("Agenda: sincronización por calendario")
-        else:
-            from app.agenda.franjas import FranjasReservadas
+    if elegido == "api":
+        from app.agenda.doctoralia_api import DoctoraliaAPI
 
-            _proveedor = FranjasReservadas()
-            log.info("Agenda: franjas reservadas para WhatsApp")
+        _proveedor = DoctoraliaAPI()
+        log.info("Agenda: API de Doctoralia (descartada el 07/08/2026)")
+    elif elegido == "calendar":
+        from app.agenda.calendar_sync import SincroniaCalendario
+
+        _proveedor = SincroniaCalendario()
+        log.info("Agenda: sincronización por calendario")
+    elif elegido == "google":
+        from app.agenda.google_calendar import AgendaGoogle
+
+        _proveedor = AgendaGoogle()
+        log.info("Agenda: Google Calendar (lectura y escritura reales)")
+    else:
+        from app.agenda.franjas import FranjasReservadas
+
+        _proveedor = FranjasReservadas()
+        log.info("Agenda: franjas reservadas para WhatsApp")
+
+    _origen_activo = elegido
     return _proveedor
 
 
 def reiniciar_proveedor() -> None:
-    """Para cuando se cambie el modo desde el panel, sin reiniciar el servicio."""
-    global _proveedor
+    """Para cuando se cambie el origen desde el panel, sin reiniciar nada."""
+    global _proveedor, _origen_activo
     _proveedor = None
+    _origen_activo = ""
 
 
 # ----------------------------------------------------------------------
@@ -122,6 +157,12 @@ async def agendar(
         else EstadoCita.AGENDADA
     )
 
+    # Si el proveedor escribió la cita en la agenda de verdad —hoy solo
+    # Google— no queda ningún paso manual, así que no debe aparecer en la
+    # lista de «por cargar». Las citas creadas antes de la mudanza siguen
+    # marcadas como pendientes: esas sí hay que copiarlas.
+    ya_esta_en_la_agenda = proveedor().escribe_en_la_agenda
+
     with sesion() as s:
         cita = Cita(
             paciente_id=paciente_id,
@@ -133,6 +174,10 @@ async def agendar(
             externo_id=resultado.externo_id,
             creada_por=creada_por,
             notas=resultado.motivo,
+            cargada_en_doctoralia=ya_esta_en_la_agenda,
+            cargada_en_doctoralia_en=(
+                datetime.utcnow() if ya_esta_en_la_agenda else None
+            ),
         )
         s.add(cita)
         s.add(RegistroAuditoria(
@@ -169,8 +214,8 @@ async def cancelar(cita_id: int, por: str = "bot") -> bool:
                 entidad="cita",
                 entidad_id=cita_id,
                 detalle=(
-                    "" if proveedor().escribe_en_doctoralia
-                    else "PLAN B: retirar también de Doctoralia a mano."
+                    "" if proveedor().escribe_en_la_agenda
+                    else "Hay que retirarla también de Doctoralia, a mano."
                 ),
             ))
             s.commit()

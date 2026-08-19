@@ -160,6 +160,25 @@ canal las toca, es imposible que se duplique una cita.
 > Si una sede no tiene franjas, el asistente no promete horarios: toma el
 > pedido y ustedes lo confirman.
 
+### Otros profesionales
+
+Si alguien más atiende por su propio número —la agenda de la doctora, un
+colega— se carga acá con su nombre, su número de WhatsApp y **cómo lo
+nombran los pacientes**: «doctora», «su esposa», lo que digan de verdad.
+
+Cuando un paciente escriba a este número pidiendo cita con esa persona, el
+asistente le pasa el número correcto en lugar de agendarle con el Dr.
+Padilla. No reenvía el mensaje: le dice a dónde escribir.
+
+El apellido se reconoce siempre, aunque no lo escriban en la lista.
+
+Si la ficha aparece con **«Falta el número»**, el asistente reconoce a quién
+buscan pero no tiene qué contestar, así que deriva la conversación a
+ustedes. Conviene completarlo.
+
+**Desactivar** deja de derivar sin borrar nada; se puede volver a activar con
+un clic.
+
 ### Respuestas frecuentes
 
 Las preguntas que más les hacen, con la respuesta que debe dar el asistente.
@@ -193,13 +212,74 @@ con la dirección correcta.
 **Háganlo la primera vez que entren.** Las contraseñas iniciales son
 provisionales.
 
+### De dónde sale la agenda *(solo el doctor)*
+
+Dice si el asistente está trabajando con las **franjas de Doctoralia** —lo
+de hoy— o con **Google Calendar**.
+
+Con franjas, el asistente agenda dentro de los horarios que ustedes le
+reservaron y la asistente copia cada cita en Doctoralia. Con Google, el
+asistente ve la agenda completa y escribe él mismo: la lista de «por cargar»
+queda vacía.
+
+Google está listo y en pausa. Antes de cambiar hay que usar **Probar la
+conexión con Google**; el panel no deja activarlo si la prueba falla. Volver
+a las franjas se puede en cualquier momento y las citas ya tomadas se
+conservan.
+
+### Avisos en este teléfono
+
+Debajo de todo, en Configuración. El interruptor hace que **este** aparato
+suene cuando una conversación requiere atención. Se activa por aparato: si
+lo prenden en el celular, la computadora sigue sin avisar, y al revés.
+
+Después de activarlo, usen el botón **Enviar aviso de prueba**. Debe llegar
+en unos segundos. Es medio minuto que evita descubrir que los avisos no
+llegaban justo el día de una urgencia.
+
+Las urgencias se quedan en la pantalla del celular hasta que alguien las
+abre. El resto de los avisos se descartan solos.
+
+---
+
+## Instalar el panel en el celular
+
+Queda con su propio ícono, se abre a pantalla completa y no parece un
+navegador. **No hay nada que bajar de una tienda de aplicaciones.**
+
+**En iPhone** — abran el panel en Safari (tiene que ser Safari), toquen
+**Compartir** y después **Agregar a pantalla de inicio**.
+
+**En Android** — abran el panel en Chrome, toquen el menú de tres puntos y
+después **Instalar aplicación** o **Agregar a pantalla de inicio**.
+
+De ahí en más se entra desde el ícono, con su usuario y contraseña.
+
+> **En iPhone este paso no es opcional si quieren los avisos.** Apple solo
+> los permite con la app agregada a la pantalla de inicio. Si activan el
+> interruptor desde Safari sin haberla agregado, el panel se los va a
+> avisar.
+
+Si el celular se queda sin señal, la app abre igual y avisa que no hay
+conexión. No muestra conversaciones viejas como si fueran de ahora: sería
+peor creer que no hay nada pendiente.
+
 ---
 
 ## Preguntas frecuentes del personal
 
 **¿Tengo que estar mirando el panel todo el día?**
 No. Cuando algo necesita a una persona llega un aviso al celular, por
-Telegram o por correo, según lo configurado.
+Telegram o por correo, según lo configurado. Los tres salen a la vez a
+propósito: el push es el más cómodo, pero el celular a veces lo corta solo,
+y Telegram es el que no falla.
+
+**Activé los avisos y no me llega ninguno.**
+Primero prueben el botón **Enviar aviso de prueba** en Configuración. Si no
+llega: en iPhone, revisen que hayan entrado desde el ícono de la pantalla de
+inicio y no desde Safari. En cualquier teléfono, revisen que el panel tenga
+permiso de notificaciones en la configuración del sistema y que no esté en
+modo «No molestar».
 
 **Le respondí a un paciente y el asistente le escribió después. ¿Por qué?**
 No debería pasar: al escribir desde el panel el asistente se detiene. Si

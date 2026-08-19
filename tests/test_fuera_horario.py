@@ -128,13 +128,24 @@ def test_se_detecta_el_consultorio_cerrado(consultorio_cerrado_siempre):
 # ----------------------------------------------------------------------
 
 @pytest.mark.asyncio
-async def test_el_saludo_avisa_que_esta_cerrado(telefono, consultorio_cerrado_siempre):
+async def test_el_saludo_fuera_de_horario_atiende_en_vez_de_anunciar_el_cierre(
+    telefono, consultorio_cerrado_siempre
+):
+    """
+    Antes el saludo abría diciendo «el consultorio está cerrado». El
+    consultorio lo probó y objetó, con razón: el paciente que escribe de
+    noche no necesita que le digan que nadie lo va a atender, necesita que
+    lo atiendan. El asistente resuelve dudas y agenda igual, y anunciar el
+    cierre de entrada espanta justo al que venía a convertirse en cita.
+
+    Lo que sí sigue prohibido fuera de horario es prometer que una persona
+    va a contestar. Eso lo cubren las pruebas de más abajo.
+    """
     await procesar_mensaje(entrante(telefono, "Hola"))
 
     texto = " ".join(respuestas(telefono)).lower()
-    assert "cerrado" in texto
-    # Pero no le cierra la puerta: sigue ofreciendo ayuda.
-    assert "agendar" in texto or "ayud" in texto
+    assert "cerrado" not in texto
+    assert "agend" in texto or "ayud" in texto
 
 
 @pytest.mark.asyncio

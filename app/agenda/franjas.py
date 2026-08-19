@@ -54,7 +54,7 @@ HORAS_MINIMAS_ANTICIPACION = 2
 
 class FranjasReservadas(ProveedorAgenda):
     #: No se escribe en Doctoralia: no hay forma. La asistente carga la cita.
-    escribe_en_doctoralia = False
+    escribe_en_la_agenda = False
 
     # ------------------------------------------------------------------
 

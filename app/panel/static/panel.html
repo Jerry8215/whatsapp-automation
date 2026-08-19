@@ -5,6 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#0B6A5F">
 <title>Panel del Asistente · Consultorio Dr. Padilla</title>
+
+<!-- Instalable en el celular: se agrega a la pantalla de inicio y abre a
+     pantalla completa, con su propio ícono y sin barra de navegador. -->
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/iconos/icono-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Consultorio">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
 :root{
   --ground:#F1F4F3;--surface:#FFFFFF;--surface-2:#EAEFED;--surface-3:#E1E8E6;
@@ -322,6 +332,7 @@ tbody tr:hover{background:var(--surface-3)}
       <button class="nav-item" data-vista="agenda" type="button">Agenda <span class="nav-badge oculto" id="badgeCargar">0</span></button>
       <button class="nav-item" data-vista="pacientes" type="button">Pacientes</button>
       <button class="nav-item" data-vista="contenido" type="button">Contenido</button>
+      <button class="nav-item" data-vista="probar" type="button">Probar el asistente</button>
       <button class="nav-item" data-vista="config" type="button">Configuración</button>
       <button class="nav-item oculto" data-vista="auditoria" id="navAuditoria" type="button">Registro de actividad</button>
     </div>
@@ -470,6 +481,35 @@ tbody tr:hover{background:var(--surface-3)}
           </div>
         </div>
 
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-head">
+            <span class="card-t">Registrar una cita de Doctoralia</span>
+            <button class="btn pequeno" id="alternarRegistro" type="button">Registrar</button>
+          </div>
+          <p class="hint" style="margin:0">
+            Si un paciente agendó por Doctoralia o por teléfono, cárguelo aquí. A partir
+            de ese momento el asistente la conoce: le manda el recordatorio de 24 horas
+            con la dirección correcta, le confirma por WhatsApp y puede reprogramarla.
+            Sin esto, para el asistente esa cita no existe.
+          </p>
+          <div id="formRegistro" class="oculto" style="margin-top:14px">
+            <div class="cfg" style="gap:10px">
+              <div><label class="pc-t" for="regTel">Teléfono del paciente</label>
+                <input class="comp-in" style="height:auto;width:100%" id="regTel" placeholder="521331234567"></div>
+              <div><label class="pc-t" for="regNom">Nombre</label>
+                <input class="comp-in" style="height:auto;width:100%" id="regNom"></div>
+              <div><label class="pc-t" for="regSede">Sede</label>
+                <select class="comp-in" style="height:auto;width:100%" id="regSede"></select></div>
+              <div><label class="pc-t" for="regCuando">Fecha y hora</label>
+                <input class="comp-in" style="height:auto;width:100%" id="regCuando" type="datetime-local"></div>
+            </div>
+            <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+              <button class="btn primary pequeno" id="guardarRegistro" type="button">Guardar</button>
+              <span class="hint" style="margin:0" id="estRegistro"></span>
+            </div>
+          </div>
+        </div>
+
         <div class="card">
           <div class="card-head"><span class="card-t">Todas las citas</span></div>
           <div class="tabla-caja">
@@ -492,12 +532,59 @@ tbody tr:hover{background:var(--surface-3)}
       </div>
       <div class="scroll">
         <div id="sedesEdit"></div>
+
+        <div class="card" style="margin-top:14px">
+          <div class="card-head">
+            <span class="card-t">Otros profesionales</span>
+            <button class="btn pequeno" id="nuevoProf" type="button">Agregar</button>
+          </div>
+          <p class="hint" style="margin:0 0 12px">
+            Si alguien más atiende por su propio número, agréguelo acá. Cuando un
+            paciente escriba a este número pidiendo cita con esa persona, el asistente
+            le pasa el número correcto en lugar de agendarle con el Dr. Padilla.
+          </p>
+          <div id="profesionales"></div>
+        </div>
+
         <div class="card" style="margin-top:14px">
           <div class="card-head">
             <span class="card-t">Respuestas frecuentes</span>
             <button class="btn pequeno" id="nuevaResp" type="button">Agregar</button>
           </div>
           <div id="respuestas"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- PROBAR EL ASISTENTE ---------- -->
+    <section class="view" id="v-probar">
+      <div class="viewbar">
+        <div>
+          <h1 class="view-title">Probar el asistente</h1>
+          <div class="view-sub">Es el sistema real respondiendo, con la misma lógica que usará por WhatsApp</div>
+        </div>
+        <a class="btn pequeno" href="/simulador" target="_blank" rel="noopener">Abrir en otra pestaña</a>
+      </div>
+      <div class="scroll">
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-head"><span class="card-t">Qué le conviene probar</span></div>
+          <p class="hint" style="margin:0 0 10px">
+            Escríbale como le escribiría un paciente. No hace falta que sea formal:
+            el asistente entiende cómo escribe la gente de verdad.
+          </p>
+          <div class="pc-row"><span class="pc-k">Costos</span><span class="pc-v" style="text-transform:none">«¿Cuánto cuesta la consulta?»</span></div>
+          <div class="pc-row"><span class="pc-k">Agenda</span><span class="pc-v" style="text-transform:none">«Quiero agendar una cita»</span></div>
+          <div class="pc-row"><span class="pc-k">Urgencia</span><span class="pc-v" style="text-transform:none">«Tengo un dolor muy fuerte del lado derecho y fiebre»</span></div>
+          <div class="pc-row"><span class="pc-k">Barrera clínica</span><span class="pc-v" style="text-transform:none">«¿Es normal que la herida se vea rosada?»</span></div>
+          <p class="hint" style="margin:10px 0 0">
+            Las dos últimas son las importantes: debe mandarlo a urgencias sin dar
+            ningún diagnóstico, y debe negarse a opinar sobre la herida. Insista si
+            quiere — está programado para no ceder.
+          </p>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <iframe id="marcoSimulador" title="Simulador del asistente"
+            style="width:100%;height:70vh;min-height:520px;border:0;display:block"></iframe>
         </div>
       </div>
     </section>
@@ -580,7 +667,9 @@ tbody tr:hover{background:var(--surface-3)}
       { weekday: "long", day: "numeric", month: "long" });
     await Promise.all([cargarResumen(), cargarLista()]);
     clearInterval(timer);
-    timer = setInterval(refrescar, 20000);
+    // Cada 12 segundos. Es una bandeja de WhatsApp: si el paciente escribe
+    // y la asistente tarda medio minuto en verlo, el aviso llega tarde.
+    timer = setInterval(refrescar, 12000);
   }
 
   $("#formAcceso").addEventListener("submit", async (e) => {
@@ -621,6 +710,12 @@ tbody tr:hover{background:var(--surface-3)}
       if (v === "agenda") cargarAgenda();
       if (v === "contenido") cargarContenido();
       if (v === "auditoria") cargarAuditoria();
+      // El simulador se carga al entrar y no antes: es una conversación
+      // real y no tiene sentido arrancarla de fondo.
+      if (v === "probar") {
+        const marco = $("#marcoSimulador");
+        if (marco && !marco.src) marco.src = "/simulador";
+      }
     });
   });
 
@@ -954,6 +1049,10 @@ tbody tr:hover{background:var(--surface-3)}
         <p class="hint">${d.ia.llamadas} consultas a la IA este mes. Al alcanzar el límite, el
           asistente pasa solo a modo básico y le avisamos. Nunca hay cargos sorpresa.</p>
         ${d.tope_alcanzado ? '<div class="aviso">Se alcanzó el límite mensual. El asistente está operando en modo básico.</div>' : ""}
+        ${!d.ia_configurada && d.modo !== "basico" ? '<div class="aviso">El modo <b>' +
+          esc(d.modo) + '</b> está seleccionado, pero el servidor no tiene configurada la clave de ' +
+          'OpenAI. El asistente está respondiendo solo con las respuestas previstas, y repite ' +
+          'las mismas ante cualquier otra pregunta. Avísele al desarrollador.</div>' : ""}
       </div>
 
       <div class="card">
@@ -964,13 +1063,41 @@ tbody tr:hover{background:var(--surface-3)}
       </div>
 
       <div class="card">
-        <div class="card-head"><span class="card-t">Agenda</span></div>
-        <div class="pc-row"><span class="pc-k">Modo</span><span class="pc-v" style="text-transform:none">${
-          d.agenda.proveedor === "api" ? "Plan A · API de Doctoralia" : "Plan B · sincronización por calendario"}</span></div>
+        <div class="card-head">
+          <span class="card-t">De dónde sale la agenda</span>
+          <span class="card-note">${d.agenda.proveedor === "google" ? "Google Calendar" : "Doctoralia · franjas"}</span>
+        </div>
+        <div class="modes">
+          <button class="mode" data-origen="franjas" aria-pressed="${d.agenda.proveedor !== "google"}"
+            ${admin ? "" : "disabled"} type="button">Doctoralia · franjas</button>
+          <button class="mode" data-origen="google" aria-pressed="${d.agenda.proveedor === "google"}"
+            ${admin ? "" : "disabled"} type="button">Google Calendar</button>
+        </div>
+        <p class="mode-desc">${d.agenda.proveedor === "google"
+          ? "El asistente ve la disponibilidad real y escribe la cita él mismo. No queda nada por cargar a mano."
+          : "Doctoralia no admite ninguna conexión, así que el asistente agenda dentro de las franjas que usted le reservó y su asistente copia la cita después."}</p>
         <div class="pc-row"><span class="pc-k">Traslado</span><span class="pc-v" style="text-transform:none">${d.agenda.traslado_min} min entre sedes</span></div>
-        ${d.agenda.escribe_en_doctoralia
-          ? '<p class="hint">Las citas se escriben directamente en Doctoralia.</p>'
-          : '<div class="aviso">Plan B: los calendarios exportados son de solo lectura. Las citas quedan como <b>solicitadas</b> y deben confirmarse en Doctoralia desde el panel.</div>'}
+        ${d.agenda.proveedor !== "google" && d.agenda.sedes_sin_franjas.length
+          ? '<div class="aviso">Sin franjas cargadas en: <b>' + esc(d.agenda.sedes_sin_franjas.join(", ")) +
+            '</b>. Ahí el asistente no promete horarios: toma el pedido y lo confirma una persona.</div>'
+          : ""}
+        ${d.agenda.proveedor === "google" ? "" : `
+          <p class="hint" style="margin-top:12px"><b>Google Calendar está construido y en pausa.</b>
+          ${d.agenda.google.listo
+            ? "Ya está conectado: puede mudar la agenda cuando quiera, y las citas ya tomadas se conservan."
+            : d.agenda.google.credenciales
+              ? "Falta indicar qué calendario usa cada sede, en la sección Contenido."
+              : "Falta cargar las credenciales de Google en el servidor."}</p>`}
+        ${admin ? '<button class="btn pequeno" id="probarGoogle" type="button" style="margin-top:12px">Probar la conexión con Google</button>' : ""}
+        <div id="resultadoGoogle"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <span class="card-t">Avisos en este teléfono</span>
+          <span class="card-note" id="notaPush"></span>
+        </div>
+        <div id="cajaPush"></div>
       </div>
 
       <div class="card">
@@ -979,6 +1106,8 @@ tbody tr:hover{background:var(--surface-3)}
         <p class="hint">Cada persona entra con su propio usuario. Queda registrado quién
           respondió cada conversación y en cuánto tiempo.</p>
       </div>`;
+
+    pintarPush();
 
     $("#cfg").querySelectorAll("[data-sede]").forEach((t) => {
       t.addEventListener("click", async () => {
@@ -1001,8 +1130,221 @@ tbody tr:hover{background:var(--surface-3)}
         } catch (e) { avisar(e.message, true); }
       });
     });
+
+    $("#cfg").querySelectorAll("[data-origen]").forEach((b) => {
+      b.addEventListener("click", async () => {
+        if (b.getAttribute("aria-pressed") === "true") return;
+        if (b.dataset.origen === "google" && !confirm(
+          "A partir de ahora el asistente va a agendar en Google Calendar y ya no " +
+          "dentro de las franjas de Doctoralia.\n\nLas citas ya tomadas se conservan. " +
+          "¿Continuamos?")) return;
+        try {
+          await pedir("/agenda/origen", {
+            method: "PUT", body: JSON.stringify({ origen: b.dataset.origen }) });
+          avisar("Origen de la agenda actualizado");
+          cargarConfig();
+        } catch (e) { avisar(e.message, true); }
+      });
+    });
+
+    const botonGoogle = $("#probarGoogle");
+    if (botonGoogle) {
+      botonGoogle.addEventListener("click", async () => {
+        const caja = $("#resultadoGoogle");
+        caja.innerHTML = '<p class="hint">Probando…</p>';
+        let r;
+        try { r = await pedir("/agenda/google/prueba"); }
+        catch (e) { caja.innerHTML = '<div class="aviso">' + esc(e.message) + "</div>"; return; }
+
+        const agendas = (r.agendas || []).map(function (a) {
+          return '<div class="pc-row"><span class="pc-k">' + esc(a.sede) + "</span>" +
+            '<span class="pc-v" style="text-transform:none">' +
+            (a.ok ? "✅ " : "⚠️ ") + esc(a.detalle) + "</span></div>";
+        }).join("");
+
+        caja.innerHTML =
+          '<div class="' + (r.ok ? "" : "aviso") + '" style="margin-top:12px">' +
+          (r.ok ? '<p class="hint">✅ ' + esc(r.detalle) + "</p>" : esc(r.detalle)) +
+          "</div>" + agendas +
+          (r.correo_servicio
+            ? '<p class="hint">Comparta cada agenda de Google con <b>' +
+              esc(r.correo_servicio) + "</b>, con permiso para «hacer cambios en los eventos».</p>"
+            : "");
+      });
+    }
   }
 
+
+  /* ---------------- avisos push ----------------
+   *
+   * Lo que el consultorio pidió: que suene el celular cuando una
+   * conversación necesita a una persona, sin tener que mirar el panel.
+   *
+   * En iPhone el permiso solo existe si la app está agregada a la pantalla
+   * de inicio — es una restricción de Apple. En vez de mostrar un botón que
+   * no haría nada, se explica el paso que falta.
+   */
+
+  let registroSW = null;
+
+  function esIOS() {
+    return /iphone|ipad|ipod/i.test(navigator.userAgent);
+  }
+
+  function estaInstalada() {
+    return window.matchMedia("(display-mode: standalone)").matches ||
+           window.navigator.standalone === true;
+  }
+
+  function haySoportePush() {
+    return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+  }
+
+  /** La clave VAPID viaja en base64url y el navegador la quiere en bytes. */
+  function claveABytes(base64url) {
+    const relleno = "=".repeat((4 - (base64url.length % 4)) % 4);
+    const base64 = (base64url + relleno).replace(/-/g, "+").replace(/_/g, "/");
+    const crudo = atob(base64);
+    const bytes = new Uint8Array(crudo.length);
+    for (let i = 0; i < crudo.length; i++) bytes[i] = crudo.charCodeAt(i);
+    return bytes;
+  }
+
+  async function registrarSW() {
+    if (!("serviceWorker" in navigator)) return null;
+    if (registroSW) return registroSW;
+    try {
+      registroSW = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+      await navigator.serviceWorker.ready;
+    } catch (e) {
+      registroSW = null;
+    }
+    return registroSW;
+  }
+
+  async function pintarPush() {
+    const caja = $("#cajaPush");
+    const nota = $("#notaPush");
+    if (!caja) return;
+
+    let info = { disponible: false, aparatos: 0, clave_publica: "" };
+    try { info = await pedir("/push/clave"); } catch (e) {}
+
+    if (!info.disponible) {
+      nota.textContent = "";
+      caja.innerHTML = `<p class="hint">Los avisos push todavía no están configurados en el
+        servidor. Mientras tanto, los avisos de intervención humana siguen llegando por
+        Telegram y por correo.</p>`;
+      return;
+    }
+
+    if (esIOS() && !estaInstalada()) {
+      nota.textContent = "Falta un paso";
+      caja.innerHTML = `<p class="hint">En iPhone los avisos solo funcionan con el panel
+        agregado a la pantalla de inicio. Toque <b>Compartir</b> y después
+        <b>Agregar a pantalla de inicio</b>; luego abra el panel desde ese ícono y vuelva
+        a esta pantalla.</p>`;
+      return;
+    }
+
+    if (!haySoportePush()) {
+      nota.textContent = "";
+      caja.innerHTML = `<p class="hint">Este navegador no admite avisos push. Los avisos
+        siguen llegando por Telegram y por correo.</p>`;
+      return;
+    }
+
+    const registro = await registrarSW();
+    const suscripcion = registro ? await registro.pushManager.getSubscription() : null;
+    const activo = !!suscripcion && Notification.permission === "granted";
+
+    nota.textContent = info.aparatos
+      ? info.aparatos + (info.aparatos === 1 ? " aparato" : " aparatos")
+      : "";
+
+    caja.innerHTML = `
+      <div class="sede">
+        <div class="sede-t">
+          <div class="sede-n">${activo ? "Avisos activados" : "Avisos desactivados"}</div>
+          <div class="sede-s">${activo
+            ? "Este aparato suena cuando una conversación requiere atención"
+            : "Actívelos para enterarse sin tener que mirar el panel"}</div>
+        </div>
+        <button class="toggle" id="togglePush" aria-pressed="${activo}" type="button"
+          aria-label="Avisos en este teléfono"></button>
+      </div>
+      ${activo ? '<button class="btn pequeno" id="probarPush" type="button" style="margin-top:12px">Enviar aviso de prueba</button>' : ""}
+      <p class="hint">Se activa por aparato: el celular y la computadora se registran por
+        separado. Una urgencia queda en pantalla hasta que alguien la abra.</p>
+      ${Notification.permission === "denied"
+        ? '<div class="aviso">El navegador tiene los avisos bloqueados para este sitio. Hay que habilitarlos desde la configuración del navegador.</div>'
+        : ""}`;
+
+    const toggle = $("#togglePush");
+    if (toggle) {
+      toggle.addEventListener("click", () => {
+        activo ? desactivarPush(suscripcion) : activarPush(info.clave_publica);
+      });
+    }
+    const probar = $("#probarPush");
+    if (probar) {
+      probar.addEventListener("click", async () => {
+        try {
+          const r = await pedir("/push/prueba", { method: "POST" });
+          avisar(r.enviados
+            ? "Aviso enviado. Debería aparecer en un momento."
+            : "No hay ningún aparato registrado.", !r.enviados);
+        } catch (e) { avisar(e.message, true); }
+      });
+    }
+  }
+
+  async function activarPush(clavePublica) {
+    try {
+      const permiso = await Notification.requestPermission();
+      if (permiso !== "granted") {
+        avisar("Sin permiso del navegador no se pueden enviar avisos", true);
+        return pintarPush();
+      }
+      const registro = await registrarSW();
+      if (!registro) throw new Error("No se pudo preparar el navegador");
+
+      const suscripcion = await registro.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: claveABytes(clavePublica),
+      });
+      const datos = suscripcion.toJSON();
+      await pedir("/push/suscribir", {
+        method: "POST",
+        body: JSON.stringify({
+          endpoint: datos.endpoint,
+          p256dh: datos.keys.p256dh,
+          auth: datos.keys.auth,
+          agente: navigator.userAgent,
+        }),
+      });
+      avisar("Avisos activados en este aparato");
+    } catch (e) {
+      avisar(e.message || "No se pudieron activar los avisos", true);
+    }
+    pintarPush();
+  }
+
+  async function desactivarPush(suscripcion) {
+    try {
+      if (suscripcion) {
+        await pedir("/push/desuscribir", {
+          method: "POST",
+          body: JSON.stringify({ endpoint: suscripcion.endpoint }),
+        });
+        await suscripcion.unsubscribe();
+      }
+      avisar("Avisos desactivados en este aparato");
+    } catch (e) {
+      avisar(e.message || "No se pudieron desactivar", true);
+    }
+    pintarPush();
+  }
 
   /* ---------------- agenda ---------------- */
 
@@ -1021,6 +1363,8 @@ tbody tr:hover{background:var(--surface-3)}
     try {
       [porCargar, citas] = await Promise.all([pedir("/por-cargar"), pedir("/citas")]);
     } catch (e) { return avisar(e.message, true); }
+
+    prepararRegistro();
 
     $("#subAgenda").textContent =
       citas.length + " citas · " + porCargar.length + " por cargar en Doctoralia";
@@ -1113,10 +1457,13 @@ tbody tr:hover{background:var(--surface-3)}
   }
 
   async function cargarContenido() {
-    let sedes, respuestas;
+    let sedes, respuestas, profesionales;
     try {
-      [sedes, respuestas] = await Promise.all([pedir("/sedes"), pedir("/respuestas")]);
+      [sedes, respuestas, profesionales] = await Promise.all([
+        pedir("/sedes"), pedir("/respuestas"), pedir("/profesionales")]);
     } catch (e) { return avisar(e.message, true); }
+
+    pintarProfesionales(profesionales);
 
     $("#sedesEdit").innerHTML = sedes.map(function (s) {
       return '<div class="card" style="margin-bottom:12px">' +
@@ -1130,6 +1477,7 @@ tbody tr:hover{background:var(--surface-3)}
         campo("Referencias para llegar", "ref" + s.id, s.referencias) +
         campo("Precio de la valoración", "pre" + s.id, s.precio_valoracion || "", "number") +
         campo("Convenios y aseguradoras", "con" + s.id, s.convenios) +
+        campo("Agenda de Google (opcional)", "gcal" + s.id, s.calendario_google_id) +
         '</div><div class="cfg" style="gap:10px;margin-top:10px">' +
         area("Horario de atención", "hor" + s.id, bloquesATexto(s.horario),
              "Una línea por bloque: <b>Martes 09:00-14:00</b>") +
@@ -1160,6 +1508,7 @@ tbody tr:hover{background:var(--surface-3)}
             direccion: $("#dir" + id).value.trim(),
             referencias: $("#ref" + id).value.trim(),
             convenios: $("#con" + id).value.trim(),
+            calendario_google_id: $("#gcal" + id).value.trim(),
             precio_valoracion: isNaN(precio) ? null : precio,
             horario_json: horario,
             franjas_json: franjas,
@@ -1206,6 +1555,177 @@ tbody tr:hover{background:var(--surface-3)}
       });
     });
   }
+
+  /* ---------------- registrar una cita de Doctoralia ----------------
+   *
+   * Sin esto el asistente solo conoce las citas que él mismo agendó: una
+   * cita tomada por Doctoralia no existe para el sistema, así que no puede
+   * recordarla ni confirmarla, y el paciente que escribe por ella termina
+   * en la bandeja de la asistente.
+   */
+
+  let registroListo = false;
+
+  async function prepararRegistro() {
+    const caja = $("#formRegistro");
+    if (!caja) return;
+
+    if (!registroListo) {
+      registroListo = true;
+
+      $("#alternarRegistro").addEventListener("click", function () {
+        caja.classList.toggle("oculto");
+        if (!caja.classList.contains("oculto")) $("#regTel").focus();
+      });
+
+      $("#guardarRegistro").addEventListener("click", function () { guardarRegistro(false); });
+    }
+
+    // Las sedes se recargan cada vez: pudo activarse una desde Configuración.
+    try {
+      const sedes = await pedir("/sedes");
+      $("#regSede").innerHTML = sedes
+        .filter(function (s) { return s.activa; })
+        .map(function (s) {
+          return '<option value="' + s.id + '">' + esc(s.nombre) + "</option>";
+        }).join("");
+    } catch (e) { /* el panel ya avisó */ }
+  }
+
+  async function guardarRegistro(forzar) {
+    const est = $("#estRegistro");
+    const cuerpo = {
+      telefono: $("#regTel").value.trim(),
+      nombre: $("#regNom").value.trim(),
+      sede_id: parseInt($("#regSede").value, 10),
+      inicio: $("#regCuando").value,
+      fuente: "doctoralia",
+      forzar: !!forzar,
+    };
+
+    if (!cuerpo.telefono || !cuerpo.inicio) {
+      est.textContent = "Faltan el teléfono y la fecha.";
+      return;
+    }
+
+    try {
+      const r = await pedir("/citas", { method: "POST", body: JSON.stringify(cuerpo) });
+      est.textContent = "";
+      avisar(r.en_google
+        ? "Cita registrada y escrita en Google Calendar"
+        : "Cita registrada");
+      $("#regTel").value = ""; $("#regNom").value = ""; $("#regCuando").value = "";
+      $("#formRegistro").classList.add("oculto");
+      cargarAgenda();
+    } catch (e) {
+      // 409: ya hay algo a esa hora. Se avisa, pero la decisión es del
+      // consultorio — puede querer sobreponerlas a propósito.
+      if (/ya hay una cita/i.test(e.message) && !forzar) {
+        if (confirm(e.message + "\n\n¿Registrarla de todas formas?")) {
+          return guardarRegistro(true);
+        }
+        est.textContent = "";
+        return;
+      }
+      est.textContent = e.message;
+      avisar(e.message, true);
+    }
+  }
+
+  /* ---------------- profesionales ----------------
+   *
+   * El caso real: la asistente lleva la agenda del doctor y la de su esposa
+   * desde el mismo número. Al separarlas, los pacientes que ya tienen este
+   * número guardado van a seguir escribiendo acá para pedirle cita a ella.
+   * El asistente lo reconoce y les pasa el número correcto.
+   */
+
+  function pintarProfesionales(lista) {
+    const otros = lista.filter(function (p) { return !p.principal; });
+
+    $("#profesionales").innerHTML = otros.length ? otros.map(function (p) {
+      return '<div class="sede" style="align-items:flex-start;flex-direction:column;gap:9px">' +
+        '<div style="display:flex;gap:8px;align-items:center;width:100%">' +
+        '<span class="sede-n">' + esc(p.nombre_completo) + '</span>' +
+        (p.incompleto ? '<span class="pill warn">Falta el número</span>' : "") +
+        (p.activo ? "" : '<span class="pill">Inactivo</span>') +
+        '<button class="btn pequeno" style="margin-left:auto" data-borrar-prof="' + p.id +
+          '" type="button">Quitar</button></div>' +
+        '<div class="cfg" style="gap:10px;width:100%">' +
+        campo("Nombre", "pn" + p.id, p.nombre) +
+        campo("Título", "pt" + p.id, p.titulo) +
+        campo("Especialidad", "pe" + p.id, p.especialidad) +
+        campo("Número de WhatsApp", "pw" + p.id, p.telefono_whatsapp) +
+        '</div>' +
+        area("Cómo la nombran los pacientes", "pk" + p.id, p.palabras_clave,
+             "Separado por coma: <b>doctora, la dra, su esposa</b>. El apellido " +
+             "siempre se reconoce, aunque no lo escriba acá.") +
+        '<div style="display:flex;gap:8px;align-items:center">' +
+        '<button class="btn primary pequeno" data-guardar-prof="' + p.id +
+          '" type="button">Guardar</button>' +
+        '<button class="btn pequeno" data-activo-prof="' + p.id + '" type="button">' +
+        (p.activo ? "Desactivar" : "Activar") + '</button>' +
+        '<span class="hint" style="margin:0" id="pest' + p.id + '"></span></div></div>';
+    }).join("")
+      : '<div class="vacio">Nadie más cargado. El asistente agenda todo con el Dr. Padilla.</div>';
+
+    document.querySelectorAll("[data-guardar-prof]").forEach(function (b) {
+      b.addEventListener("click", async function () {
+        const id = b.dataset.guardarProf;
+        try {
+          await pedir("/profesionales/" + id, { method: "PUT", body: JSON.stringify({
+            nombre: $("#pn" + id).value.trim(),
+            titulo: $("#pt" + id).value.trim(),
+            especialidad: $("#pe" + id).value.trim(),
+            telefono_whatsapp: $("#pw" + id).value.trim(),
+            palabras_clave: $("#pk" + id).value.trim(),
+          })});
+          $("#pest" + id).textContent = "Guardado";
+          avisar("Profesional actualizado");
+          setTimeout(cargarContenido, 700);
+        } catch (e) { $("#pest" + id).textContent = e.message; avisar(e.message, true); }
+      });
+    });
+
+    document.querySelectorAll("[data-activo-prof]").forEach(function (b) {
+      b.addEventListener("click", async function () {
+        const id = b.dataset.activoProf;
+        const p = otros.find(function (x) { return String(x.id) === id; });
+        try {
+          await pedir("/profesionales/" + id, {
+            method: "PUT", body: JSON.stringify({ activo: !p.activo }) });
+          avisar(p.activo ? "Desactivado — el asistente deja de derivar" : "Activado");
+          cargarContenido();
+        } catch (e) { avisar(e.message, true); }
+      });
+    });
+
+    document.querySelectorAll("[data-borrar-prof]").forEach(function (b) {
+      b.addEventListener("click", async function () {
+        if (!confirm("¿Quitar a este profesional? El asistente dejará de derivar a su número.")) return;
+        try {
+          await pedir("/profesionales/" + b.dataset.borrarProf, { method: "DELETE" });
+          avisar("Profesional quitado"); cargarContenido();
+        } catch (e) { avisar(e.message, true); }
+      });
+    });
+  }
+
+  const btnNuevoProf = $("#nuevoProf");
+  if (btnNuevoProf) btnNuevoProf.addEventListener("click", async function () {
+    const nombre = prompt("Nombre del profesional (sin el título)");
+    if (!nombre) return;
+    const titulo = prompt("Título: Dr. o Dra.", "Dra.") || "Dra.";
+    const telefono = prompt("Su número de WhatsApp, con clave de país") || "";
+    const claves = prompt(
+      "¿Cómo la nombran los pacientes? Separado por coma.\nPor ejemplo: doctora, su esposa") || "";
+    try {
+      await pedir("/profesionales", { method: "POST", body: JSON.stringify({
+        nombre: nombre.trim(), titulo: titulo.trim(), telefono_whatsapp: telefono.trim(),
+        palabras_clave: claves.trim(), deriva: true, activo: true }) });
+      avisar("Profesional agregado"); cargarContenido();
+    } catch (e) { avisar(e.message, true); }
+  });
 
   function campo(etiqueta, id, valor, tipo) {
     return '<div><label class="pc-t" for="' + id + '">' + etiqueta + '</label>' +
@@ -1257,12 +1777,26 @@ tbody tr:hover{background:var(--surface-3)}
     if (!yo) return;
     try {
       await cargarResumen();
+
+      // Se actualiza la vista que la persona está mirando. Antes solo se
+      // refrescaban el resumen y la bandeja, así que quien estaba en Agenda
+      // o en Pacientes veía datos viejos y tenía que recargar a mano.
+      //
+      // Contenido y Configuración quedan fuera a propósito: son formularios,
+      // y refrescarlos mientras alguien escribe le borraría lo que lleva.
       if ($("#v-chats").classList.contains("on")) {
         await cargarLista();
         if (actual) await abrir(actual);
+      } else if ($("#v-agenda").classList.contains("on")) {
+        // Salvo que esté cargando una cita: recargar le vaciaría el formulario.
+        if ($("#formRegistro").classList.contains("oculto")) await cargarAgenda();
+      } else if ($("#v-pacientes").classList.contains("on")) {
+        await cargarPacientes();
       }
+
       $("#latido").classList.remove("off");
-      $("#estadoLatido").textContent = "En línea";
+      $("#estadoLatido").textContent = "Actualizado " + new Date()
+        .toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" });
     } catch (e) {
       $("#latido").classList.add("off");
       $("#estadoLatido").textContent = "Sin conexión";
@@ -1272,6 +1806,11 @@ tbody tr:hover{background:var(--surface-3)}
   /* ---------------- arranque ---------------- */
 
   (async function () {
+    // El service worker se registra siempre, no solo al entrar a
+    // Configuración: es lo que hace que el panel se pueda agregar a la
+    // pantalla de inicio y que abra aunque el celular pierda señal.
+    registrarSW();
+
     try { yo = await pedir("/yo"); await entrar(); }
     catch (e) { mostrarAcceso(); }
   })();
