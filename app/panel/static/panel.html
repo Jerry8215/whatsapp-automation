@@ -273,19 +273,128 @@ tbody tr:hover{background:var(--surface-3)}
 .brindis.mal{background:var(--critical);color:#fff}
 .oculto{display:none!important}
 
-@media (max-width:1180px){.md{grid-template-columns:280px minmax(0,1fr)}.pcard{display:none}.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+/* ==================================================================
+   MOVIMIENTO
+   Discreto y con propósito: orienta, no decora. Todo se apaga solo si
+   el sistema pide menos movimiento (regla global, más arriba).
+   ================================================================== */
+@keyframes entra-vista{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes aparece{from{opacity:0}to{opacity:1}}
+@keyframes late{0%,100%{box-shadow:0 0 0 3px var(--good-soft)}50%{box-shadow:0 0 0 7px transparent}}
+@keyframes pop{0%{transform:scale(.5);opacity:0}60%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
+@keyframes sube{from{opacity:0;transform:translate(-50%,16px)}to{opacity:1;transform:translate(-50%,0)}}
+
+.view.on{animation:entra-vista .28s cubic-bezier(.22,.9,.3,1) both}
+.dot:not(.off){animation:late 2.6s ease-out infinite}
+.nav-badge{animation:pop .32s cubic-bezier(.34,1.4,.5,1) both}
+.brindis{animation:sube .26s cubic-bezier(.22,.9,.3,1) both}
+
+/* El elemento activo se marca con una barra fina, no con un bloque de
+   color: se distingue de un vistazo sin gritar. */
+.nav-item{position:relative}
+.nav-item::before{content:"";position:absolute;left:0;top:50%;width:3px;height:0;
+  border-radius:0 3px 3px 0;background:var(--accent);transform:translateY(-50%);
+  transition:height .2s cubic-bezier(.22,.9,.3,1)}
+.nav-item[aria-current="true"]::before{height:18px}
+.nav-item:active{transform:scale(.99)}
+
+.btn{transition:background .15s,border-color .15s,color .15s,transform .1s,box-shadow .15s}
+.btn:active{transform:translateY(1px)}
+.card{transition:box-shadow .2s,border-color .2s}
+.card:hover{box-shadow:var(--shadow-m)}
+.kpi{transition:transform .18s cubic-bezier(.22,.9,.3,1),box-shadow .18s}
+.kpi:hover{transform:translateY(-2px);box-shadow:var(--shadow-m)}
+.li,.sede{transition:background .15s}
+
+/* ==================================================================
+   BARRAS DE DESPLAZAMIENTO
+   ================================================================== */
+*{scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+::-webkit-scrollbar{width:11px;height:11px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px;
+  border:3px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:var(--ink-4);background-clip:content-box}
+
+/* ==================================================================
+   BARRA MÓVIL Y CAJÓN DE NAVEGACIÓN
+   En el celular el menú lateral no cabe. Se convierte en un cajón que
+   entra desde la izquierda: antes se volvía una lista de botones a lo
+   ancho que empujaba el contenido fuera de la pantalla.
+   ================================================================== */
+.barra-movil{display:none}
+.velo{display:none}
+body.sin-scroll{overflow:hidden}
+
+.hamburguesa{width:40px;height:40px;flex:none;border:1px solid var(--line);
+  border-radius:var(--r-m);background:var(--surface-2);display:grid;place-content:center;
+  gap:4px;padding:0;transition:background .15s,border-color .15s}
+.hamburguesa:hover{background:var(--surface-3)}
+.hamburguesa span{display:block;width:17px;height:2px;border-radius:2px;background:var(--ink-2);
+  transition:transform .24s cubic-bezier(.22,.9,.3,1),opacity .18s}
+.hamburguesa.activa span:nth-child(1){transform:translateY(6px) rotate(45deg)}
+.hamburguesa.activa span:nth-child(2){opacity:0}
+.hamburguesa.activa span:nth-child(3){transform:translateY(-6px) rotate(-45deg)}
+.movil-marca{display:flex;align-items:center;gap:9px;min-width:0}
+.barra-movil .mark{width:30px;height:30px;font-size:16px;border-radius:8px}
+.barra-movil .brand-name{font-family:var(--serif);font-size:14px;line-height:1.15}
+.barra-movil .brand-sub{font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.movil-badge{margin-left:auto}
+
+/* ==================================================================
+   ADAPTACIÓN POR TAMAÑO
+   ================================================================== */
+@media (max-width:1180px){
+  .md{grid-template-columns:280px minmax(0,1fr)}
+  .pcard{display:none}
+  .kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+
 @media (max-width:900px){
   .app{grid-template-columns:minmax(0,1fr)}
-  .rail{flex-direction:row;align-items:center;flex-wrap:wrap;gap:10px;border-right:0;border-bottom:1px solid var(--line);padding:12px}
-  .brand{padding:0 8px 0 0}.nav-label{display:none}
-  .rail-foot{margin-top:0;padding-top:0;border-top:0;flex-direction:row;align-items:center;margin-left:auto}
-  .nav{flex-direction:row;flex-wrap:wrap;gap:4px}
-  .grid2{grid-template-columns:minmax(0,1fr)}
-  .md{grid-template-columns:minmax(0,1fr)}
-  .list{border-right:0;border-bottom:1px solid var(--line);max-height:320px}
+
+  .barra-movil{display:flex;align-items:center;gap:11px;position:sticky;top:0;z-index:40;
+    padding:9px 14px;padding-top:calc(9px + env(safe-area-inset-top));
+    background:var(--surface);border-bottom:1px solid var(--line)}
+
+  .rail{position:fixed;top:0;bottom:0;left:0;width:min(84vw,290px);z-index:60;
+    transform:translateX(-101%);transition:transform .28s cubic-bezier(.22,.9,.3,1);
+    border-right:1px solid var(--line);border-bottom:0;overflow-y:auto;
+    padding-top:calc(18px + env(safe-area-inset-top));
+    padding-bottom:calc(18px + env(safe-area-inset-bottom))}
+  .rail.abierto{transform:none;box-shadow:0 0 60px -10px rgba(0,0,0,.45)}
+  .velo{display:block;position:fixed;inset:0;z-index:50;
+    background:rgba(6,14,16,.52);animation:aparece .22s ease both}
+
+  .viewbar{position:sticky;top:0;z-index:20}
+  .grid2,.md{grid-template-columns:minmax(0,1fr)}
+  .list{border-right:0;border-bottom:1px solid var(--line);max-height:340px}
   .msg{max-width:88%}
+  .scroll{padding-bottom:calc(28px + env(safe-area-inset-bottom))}
+  #marcoSimulador{height:calc(100vh - 330px);min-height:360px}
 }
-@media (max-width:560px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.scroll{padding:14px}.viewbar{padding:12px 14px}}
+
+@media (max-width:640px){
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .scroll{padding:14px 14px calc(20px + env(safe-area-inset-bottom))}
+  .viewbar{padding:11px 14px}
+  .view-title{font-size:clamp(17px,4.6vw,20px)}
+  .viewbar-r{width:100%;margin-left:0}
+  .cfg{grid-template-columns:minmax(0,1fr)}
+  /* Una tabla nunca empuja la página: se desplaza dentro de su caja. */
+  .tabla-caja table{min-width:520px}
+}
+
+@media (max-width:420px){
+  .kpis{grid-template-columns:minmax(0,1fr)}
+  .msg{max-width:94%}
+  .brindis{max-width:calc(100vw - 28px);font-size:13px}
+}
+
+/* En pantallas muy anchas el contenido no se estira sin límite. */
+@media (min-width:1600px){
+  .scroll>*{max-width:1380px;margin-inline:auto}
+}
 </style>
 </head>
 <body>
@@ -317,7 +426,26 @@ tbody tr:hover{background:var(--surface-3)}
 <!-- ===================== APLICACIÓN ===================== -->
 <div class="app oculto" id="app">
 
-  <nav class="rail">
+  <!-- Barra superior, solo en celular. El menu lateral vive detras de
+       este boton: en una pantalla angosta no cabe y tapaba el contenido. -->
+  <header class="barra-movil">
+    <button class="hamburguesa" id="abrirMenu" type="button"
+      aria-label="Abrir menu" aria-expanded="false" aria-controls="rail">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="movil-marca">
+      <div class="mark">P</div>
+      <div>
+        <div class="brand-name">Dr. J. G. Padilla</div>
+        <div class="brand-sub">Cirugia general</div>
+      </div>
+    </div>
+    <span class="nav-badge movil-badge oculto" id="badgeMovil">0</span>
+  </header>
+  <div class="velo oculto" id="veloMenu"></div>
+
+
+  <nav class="rail" id="rail">
     <div class="brand">
       <div class="mark">P</div>
       <div>
@@ -695,6 +823,28 @@ tbody tr:hover{background:var(--surface-3)}
     yo = null; mostrarAcceso();
   });
 
+  /* ---------------- el cajon del celular ---------------- */
+
+  const rail = $("#rail"), velo = $("#veloMenu"), botonMenu = $("#abrirMenu");
+
+  function menu(abrir) {
+    rail.classList.toggle("abierto", abrir);
+    velo.classList.toggle("oculto", !abrir);
+    botonMenu.classList.toggle("activa", abrir);
+    botonMenu.setAttribute("aria-expanded", String(abrir));
+    // Sin esto, el fondo se desplaza por detras del cajon abierto.
+    document.body.classList.toggle("sin-scroll", abrir);
+  }
+
+  botonMenu.addEventListener("click", () => menu(!rail.classList.contains("abierto")));
+  velo.addEventListener("click", () => menu(false));
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") menu(false); });
+
+  // Al elegir una seccion el cajon se cierra solo: si no, en el celular
+  // tapa justo lo que la persona acaba de pedir.
+  document.querySelectorAll(".nav-item").forEach(
+    (b) => b.addEventListener("click", () => menu(false)));
+
   /* ---------------- navegación ---------------- */
 
   document.querySelectorAll(".nav-item").forEach((b) => {
@@ -754,6 +904,14 @@ tbody tr:hover{background:var(--surface-3)}
     const badge = $("#badge");
     badge.textContent = d.requieren_atencion;
     badge.classList.toggle("oculto", !d.requieren_atencion);
+
+    // En el celular el menu esta cerrado, asi que el pendiente se avisa
+    // en la barra de arriba; si no, no se ve hasta abrir el cajon.
+    const badgeMovil = $("#badgeMovil");
+    if (badgeMovil) {
+      badgeMovil.textContent = d.requieren_atencion;
+      badgeMovil.classList.toggle("oculto", !d.requieren_atencion);
+    }
 
     const bc = $("#badgeCargar");
     if (bc) {
