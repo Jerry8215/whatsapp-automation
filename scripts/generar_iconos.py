@@ -1,4 +1,8 @@
 """
+SUPERSEDIDO. Los iconos ahora se generan del logotipo real del
+consultorio (scripts/generar_logo.py). Este archivo se conserva solo como
+referencia del codificador de PNG hecho a mano; NO lo ejecute: sobrescribe
+los iconos de la marca con la cruz generica.
 Genera los íconos del panel instalado en el celular.
 
 Se escriben los PNG a mano —sin dependencias de imagen— porque son cuatro

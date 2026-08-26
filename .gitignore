@@ -31,3 +31,6 @@ docs/_vista/
 1.txt
 WORKANA*
 *_files/
+
+# Archivos sueltos que deja el navegador al descargar
+b7f24409-*.png

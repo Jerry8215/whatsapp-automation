@@ -8,9 +8,13 @@
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#F1F4F3",
-  "theme_color": "#0B6A5F",
-  "categories": ["medical", "productivity", "business"],
+  "background_color": "#FFFFFF",
+  "theme_color": "#1D4E9B",
+  "categories": [
+    "medical",
+    "productivity",
+    "business"
+  ],
   "icons": [
     {
       "src": "/iconos/icono-192.png",

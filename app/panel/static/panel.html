@@ -3,8 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#0B6A5F">
+<meta name="theme-color" content="#1D4E9B">
 <title>Panel del Asistente · Consultorio Dr. Padilla</title>
+
+<!-- Inter para la interfaz (numeros tabulares, legible en tamano chico) y
+     Playfair para los titulos, que acompana la serif del logotipo. Si no
+     cargan, la pila de respaldo del sistema mantiene el diseno intacto. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap">
 
 <!-- Instalable en el celular: se agrega a la pantalla de inicio y abre a
      pantalla completa, con su propio ícono y sin barra de navegador. -->
@@ -486,6 +493,130 @@ body.sin-scroll{overflow:hidden}
   .list{height:min(48vh,330px);max-height:none}
   .thread{min-height:60vh}
 }
+
+/* ==================================================================
+   MARCA
+   Los colores salen del logotipo del consultorio: azul marino y cian.
+   Un solo par de tonos alimenta todos los degradados de la interfaz.
+
+   Para cambiar la marca entera, cambie estas dos líneas y nada más.
+   ================================================================== */
+:root{
+  --marca-a:#18B9D1;   /* cian del logotipo */
+  --marca-b:#1D4E9B;   /* azul del logotipo */
+  --deg-marca:linear-gradient(135deg,var(--marca-a),var(--marca-b));
+  --sans:"Inter",ui-sans-serif,"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,sans-serif;
+  --serif:"Playfair Display","Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+
+  --accent:#17639E;--accent-hi:#1E86C9;--accent-soft:#E4F1FA;--on-accent:#FFFFFF;
+}
+:root[data-theme="dark"]{
+  --accent:#4FC3DE;--accent-hi:#74D7EE;--accent-soft:#0E2F3E;--on-accent:#06202B;
+}
+@media (prefers-color-scheme:dark){:root{
+  --accent:#4FC3DE;--accent-hi:#74D7EE;--accent-soft:#0E2F3E;--on-accent:#06202B;
+}}
+
+/* Ambiente: dos manchas de color muy diluidas, fijas al fondo. Dan
+   profundidad sin ponerse debajo del texto, que es lo que arruina la
+   legibilidad de los fondos con degradado fuerte. */
+body{
+  background:
+    radial-gradient(1100px 620px at 100% -8%, color-mix(in srgb,var(--marca-a) 13%,transparent), transparent 62%),
+    radial-gradient(900px 520px at -8% 108%, color-mix(in srgb,var(--marca-b) 15%,transparent), transparent 62%),
+    var(--ground);
+  background-attachment:fixed;
+}
+
+/* ==================================================================
+   TIPOGRAFÍA
+   Todo subió un escalón: en el celular los tamaños anteriores obligaban
+   a acercar el teléfono para leer la bandeja.
+   ================================================================== */
+body{font-size:16px;letter-spacing:-.005em}
+.view-title{font-size:clamp(21px,5vw,26px);letter-spacing:-.02em}
+.view-sub{font-size:13.5px}
+.nav-item{font-size:15px;padding:10px 12px}
+.rail-btn{font-size:13.5px;padding:9px 10px}
+.brand-name{font-size:16px}
+.brand-sub{font-size:10.5px}
+.item-n{font-size:15px}
+.item-m{font-size:14px}
+.item-t{font-size:12px}
+.btn{font-size:14px;padding:9px 16px}
+.btn.pequeno{font-size:13px;padding:7px 12px}
+.tab{font-size:13.5px;padding:7px 13px}
+.pill{font-size:10.5px;letter-spacing:.06em}
+.kpi-l{font-size:12.5px}
+.kpi-v{font-size:clamp(26px,6vw,32px);letter-spacing:-.03em}
+.card-t{font-size:13px;letter-spacing:.08em}
+.th-name{font-size:17px}
+.th-meta{font-size:13px}
+.msg{font-size:15px}
+.hint{font-size:13.5px}
+.vacio{font-size:14px}
+table{font-size:14px}
+
+/* ==================================================================
+   EL LOGOTIPO
+   ================================================================== */
+.mark{background:none;box-shadow:none;border-radius:50%;overflow:hidden;
+  display:grid;place-items:center}
+.mark img{width:100%;height:100%;object-fit:contain;display:block}
+.rail .mark,.barra-movil .mark{width:38px;height:38px}
+.acceso-marca .mark{width:60px;height:60px}
+.mark{filter:drop-shadow(0 4px 12px color-mix(in srgb,var(--marca-b) 32%,transparent))}
+
+/* ==================================================================
+   BOTONES
+   ================================================================== */
+.btn{background-image:linear-gradient(180deg,
+    color-mix(in srgb,#fff 6%,transparent),transparent);
+  border-radius:10px;font-weight:600}
+.btn.primary{background-image:var(--deg-marca);border-color:transparent;color:#fff;
+  box-shadow:0 1px 2px color-mix(in srgb,var(--marca-b) 45%,transparent),
+             0 8px 20px -10px color-mix(in srgb,var(--marca-a) 85%,transparent)}
+.btn.primary:hover{filter:brightness(1.08) saturate(1.05)}
+.btn.primary:active{filter:brightness(.96)}
+.tab[aria-selected="true"]{background-image:var(--deg-marca);color:#fff;
+  box-shadow:0 6px 16px -9px color-mix(in srgb,var(--marca-a) 90%,transparent)}
+.avatar{background-image:var(--deg-marca);color:#fff}
+.nav-item::before{background:var(--deg-marca)}
+.stripe{border-radius:0 2px 2px 0}
+
+/* ==================================================================
+   BARRA DEL CELULAR
+   El botón del menú pasa a la derecha, donde llega el pulgar. El número
+   rojo se convierte en un punto: seguía siendo la única señal de que hay
+   pacientes esperando, así que no se quita, se vuelve discreto.
+   ================================================================== */
+.barra-movil{position:relative}
+.hamburguesa{order:3;margin-left:auto;width:44px;height:44px;border-radius:12px}
+.hamburguesa span{width:19px}
+.movil-badge{position:absolute;right:9px;top:9px;z-index:1;
+  width:11px;height:11px;min-width:0;padding:0;border-radius:50%;
+  font-size:0;line-height:0;color:transparent;background:var(--critical);
+  box-shadow:0 0 0 3px var(--surface);animation:pulso 2.2s ease-out infinite}
+@keyframes pulso{0%,100%{box-shadow:0 0 0 3px var(--surface),0 0 0 4px color-mix(in srgb,var(--critical) 55%,transparent)}
+  50%{box-shadow:0 0 0 3px var(--surface),0 0 0 9px transparent}}
+
+/* ==================================================================
+   EL ENCABEZADO NO SE VA AL DESPLAZAR
+   El cuerpo entero se desplazaba, así que el título de la sección se
+   perdía arriba. Ahora solo se desplaza el contenido: la barra y el
+   título quedan fijos, como en una aplicación.
+   ================================================================== */
+@media (max-width:900px){
+  html,body{overflow:hidden;height:100%}
+  .app{height:100dvh;grid-template-rows:auto minmax(0,1fr);overflow:hidden}
+  .main{min-height:0;overflow:hidden}
+  .view{min-height:0}
+  .view.on{min-height:0;overflow:hidden}
+  .scroll{overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0}
+  .md{min-height:0;overflow:hidden}
+  .thread{min-height:0}
+  .list{height:min(42vh,300px)}
+}
 </style>
 </head>
 <body>
@@ -494,20 +625,7 @@ body.sin-scroll{overflow:hidden}
 <div class="acceso" id="acceso">
   <form class="acceso-caja" id="formAcceso">
     <div class="acceso-marca">
-      <span class="mark" aria-hidden="true">
-        <svg viewBox="0 0 32 32" fill="none" focusable="false">
-          <path class="globo" fill="url(#gLogo1)"
-            d="M16 4.4c-6.4 0-11.6 4.3-11.6 9.7 0 3 1.6 5.7 4.2 7.5v4.5c0 .7.8 1.1 1.4.7l3.9-2.7c.7.1 1.4.2 2.1.2 6.4 0 11.6-4.3 11.6-9.7S22.4 4.4 16 4.4Z"/>
-          <path class="cruz" d="M16 9.6v8.6M11.7 13.9h8.6"
-            stroke-width="2.4" stroke-linecap="round"/>
-          <defs>
-            <linearGradient id="gLogo1" x1="4" y1="4" x2="27" y2="27"
-              gradientUnits="userSpaceOnUse">
-              <stop class="p1"/><stop class="p2" offset="1"/>
-            </linearGradient>
-          </defs>
-        </svg>
-      </span>
+      <span class="mark" aria-hidden="true"><img src="/iconos/logo-192.png" alt="" width="192" height="192" decoding="async"></span>
       <div>
         <h1>Consultorio Dr. Padilla</h1>
         <div class="sub">Panel del asistente</div>
@@ -538,20 +656,7 @@ body.sin-scroll{overflow:hidden}
       <span></span><span></span><span></span>
     </button>
     <div class="movil-marca">
-      <span class="mark" aria-hidden="true">
-        <svg viewBox="0 0 32 32" fill="none" focusable="false">
-          <path class="globo" fill="url(#gLogo2)"
-            d="M16 4.4c-6.4 0-11.6 4.3-11.6 9.7 0 3 1.6 5.7 4.2 7.5v4.5c0 .7.8 1.1 1.4.7l3.9-2.7c.7.1 1.4.2 2.1.2 6.4 0 11.6-4.3 11.6-9.7S22.4 4.4 16 4.4Z"/>
-          <path class="cruz" d="M16 9.6v8.6M11.7 13.9h8.6"
-            stroke-width="2.4" stroke-linecap="round"/>
-          <defs>
-            <linearGradient id="gLogo2" x1="4" y1="4" x2="27" y2="27"
-              gradientUnits="userSpaceOnUse">
-              <stop class="p1"/><stop class="p2" offset="1"/>
-            </linearGradient>
-          </defs>
-        </svg>
-      </span>
+      <span class="mark" aria-hidden="true"><img src="/iconos/logo-192.png" alt="" width="192" height="192" decoding="async"></span>
       <div>
         <div class="brand-name">Dr. J. G. Padilla</div>
         <div class="brand-sub">Cirugia general</div>
@@ -564,20 +669,7 @@ body.sin-scroll{overflow:hidden}
 
   <nav class="rail" id="rail">
     <div class="brand">
-      <span class="mark" aria-hidden="true">
-        <svg viewBox="0 0 32 32" fill="none" focusable="false">
-          <path class="globo" fill="url(#gLogo3)"
-            d="M16 4.4c-6.4 0-11.6 4.3-11.6 9.7 0 3 1.6 5.7 4.2 7.5v4.5c0 .7.8 1.1 1.4.7l3.9-2.7c.7.1 1.4.2 2.1.2 6.4 0 11.6-4.3 11.6-9.7S22.4 4.4 16 4.4Z"/>
-          <path class="cruz" d="M16 9.6v8.6M11.7 13.9h8.6"
-            stroke-width="2.4" stroke-linecap="round"/>
-          <defs>
-            <linearGradient id="gLogo3" x1="4" y1="4" x2="27" y2="27"
-              gradientUnits="userSpaceOnUse">
-              <stop class="p1"/><stop class="p2" offset="1"/>
-            </linearGradient>
-          </defs>
-        </svg>
-      </span>
+      <span class="mark" aria-hidden="true"><img src="/iconos/logo-192.png" alt="" width="192" height="192" decoding="async"></span>
       <div>
         <div class="brand-name">Dr. J. G. Padilla</div>
         <div class="brand-sub">Cirugía general</div>
