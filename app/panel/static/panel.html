@@ -797,6 +797,53 @@ html,body{max-width:100%;overflow-x:hidden}
   .visor-cerrar{top:auto;bottom:-58px;right:auto;left:50%;transform:translateX(-50%)}
   .visor-cerrar:hover{transform:translateX(-50%) rotate(90deg)}
 }
+
+/* ==================================================================
+   PALETA VIOLETA
+   Pedido del consultorio. Toda la interfaz —degradados, botones,
+   realces y fondo— sale de estos tres tonos.
+
+   Nota para quien retome esto: el logotipo del consultorio es azul
+   marino y cian. El violeta convive con él, no lo acompaña. Volver al
+   color de la marca es cambiar `--marca-a` y `--marca-b` por
+   #18B9D1 y #1D4E9B.
+   ================================================================== */
+:root{
+  --marca-a:#C084FC;   /* violeta claro */
+  --marca-b:#7C3AED;   /* violeta profundo */
+  --marca-c:#E879F9;   /* magenta, para el brillo del fondo */
+  --deg-marca:linear-gradient(135deg,var(--marca-a),var(--marca-b));
+
+  --accent:#7C3AED;--accent-hi:#9B5CF6;--accent-soft:#F1E9FE;--on-accent:#FFFFFF;
+}
+:root[data-theme="dark"]{
+  --accent:#C4A2FC;--accent-hi:#D7BEFF;--accent-soft:#2A1A47;--on-accent:#190A2E;
+}
+@media (prefers-color-scheme:dark){:root{
+  --accent:#C4A2FC;--accent-hi:#D7BEFF;--accent-soft:#2A1A47;--on-accent:#190A2E;
+}}
+
+/* Fondo: tres manchas de violeta y magenta, fijas, que se apagan hacia
+   el centro para no meterse debajo del texto. */
+body{
+  background:
+    radial-gradient(1100px 620px at 100% -6%, color-mix(in srgb,var(--marca-a) 34%,transparent), transparent 58%),
+    radial-gradient(900px 560px at -8% 102%, color-mix(in srgb,var(--marca-b) 40%,transparent), transparent 58%),
+    radial-gradient(760px 460px at 78% 108%, color-mix(in srgb,var(--marca-c) 22%,transparent), transparent 62%),
+    var(--ground);
+  background-attachment:fixed;
+}
+
+/* El realce de la fila activa y del menú siguen la marca nueva. */
+.item[aria-selected="true"]{background-image:linear-gradient(90deg,
+  color-mix(in srgb,var(--marca-a) 16%,transparent),transparent 62%)}
+.nav-item[aria-current="true"]{background-image:linear-gradient(90deg,
+  color-mix(in srgb,var(--marca-a) 18%,transparent),transparent 70%)}
+.rail{background-image:linear-gradient(180deg,
+  color-mix(in srgb,var(--marca-b) 12%,transparent),transparent 240px)}
+.barra-movil{background-image:linear-gradient(180deg,
+  color-mix(in srgb,var(--marca-b) 14%,transparent),transparent)}
+.mark{filter:drop-shadow(0 4px 14px color-mix(in srgb,var(--marca-b) 42%,transparent))}
 </style>
 </head>
 <body>

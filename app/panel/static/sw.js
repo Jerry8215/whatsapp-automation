@@ -13,15 +13,14 @@
  * que sale de /panel/api va siempre a la red.
  */
 
-const VERSION = "v1";
+const VERSION = "v3";
 const CACHE = `panel-${VERSION}`;
 
-/** El mínimo para que la app abra: la página y sus íconos. */
-const ARMAZON = [
-  "/panel",
-  "/iconos/icono-192.png",
-  "/iconos/icono-512.png",
-];
+// Solo la página. Los íconos NO se precargan a propósito: si cambia la
+// marca, un archivo precargado se sigue sirviendo desde la caché aunque
+// el servidor ya tenga el nuevo. Es lo que hizo que el logotipo viejo
+// siguiera apareciendo después de reemplazarlo.
+const ARMAZON = ["/panel"];
 
 self.addEventListener("install", function (evento) {
   evento.waitUntil(
@@ -77,14 +76,20 @@ self.addEventListener("fetch", function (evento) {
     return;
   }
 
-  // Íconos y estáticos: de la caché si están, y se refrescan de fondo.
+  // Íconos y estáticos: se responde con lo guardado para que abra rápido,
+  // pero SIEMPRE se pide la versión nueva y se guarda para la próxima.
+  // Sin esa segunda parte, un archivo que cambia en el servidor no vuelve
+  // a bajarse nunca y el aparato se queda con el viejo.
   evento.respondWith(
     caches.match(peticion).then(function (guardada) {
-      return guardada || fetch(peticion).then(function (respuesta) {
-        const copia = respuesta.clone();
-        caches.open(CACHE).then(function (c) { c.put(peticion, copia); });
+      const red = fetch(peticion).then(function (respuesta) {
+        if (respuesta && respuesta.ok) {
+          const copia = respuesta.clone();
+          caches.open(CACHE).then(function (c) { c.put(peticion, copia); });
+        }
         return respuesta;
-      });
+      }).catch(function () { return guardada; });
+      return guardada || red;
     })
   );
 });
