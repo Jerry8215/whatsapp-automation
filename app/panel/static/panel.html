@@ -747,20 +747,70 @@ html,body{max-width:100%;overflow-x:hidden}
 .msgs>*{flex:0 0 auto}
 .composer{flex:0 0 auto}
 .app{width:100%;max-width:100vw}
+
+/* ==================================================================
+   ACCESO
+   El logotipo encabeza la pantalla en lugar de ir apretado dentro de la
+   tarjeta. Es lo primero que ve quien entra, y es la marca del
+   consultorio: merece el espacio.
+   ================================================================== */
+.acceso{align-content:center;gap:0}
+.acceso-encabezado{width:100%;max-width:380px;margin:0 auto 22px;text-align:center;
+  display:flex;flex-direction:column;align-items:center;gap:2px}
+.acceso-encabezado h1{font-family:var(--serif);font-size:clamp(21px,5.5vw,25px);
+  line-height:1.2;margin-top:14px}
+.acceso-encabezado .sub{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-3)}
+.marca-grande{width:clamp(96px,26vw,132px);height:clamp(96px,26vw,132px)}
+.marca-grande img{border-radius:50%}
+.acceso-marca{display:none}
+
+/* ==================================================================
+   EL LOGOTIPO SE PUEDE AMPLIAR
+   En el celular la marca mide poco más de cuarenta píxeles y el nombre
+   no se alcanza a leer. Un toque la muestra completa.
+   ================================================================== */
+.marca-boton{border:0;padding:0;background:none;cursor:zoom-in;
+  transition:transform .18s cubic-bezier(.22,.9,.3,1)}
+.marca-boton:hover{transform:scale(1.06)}
+.marca-boton:active{transform:scale(.97)}
+
+.visor{position:fixed;inset:0;z-index:120;display:grid;place-items:center;padding:24px;
+  background:rgba(4,10,14,.72);backdrop-filter:blur(6px);
+  animation:aparece .2s ease both}
+.visor-caja{position:relative;margin:0;display:flex;flex-direction:column;
+  align-items:center;gap:16px;max-width:min(88vw,460px);
+  animation:visor-entra .32s cubic-bezier(.22,1.15,.4,1) both}
+@keyframes visor-entra{from{opacity:0;transform:scale(.9) translateY(10px)}to{opacity:1;transform:none}}
+.visor-caja img{width:min(72vw,360px);height:auto;border-radius:50%;display:block;
+  box-shadow:0 24px 60px -20px rgba(0,0,0,.8)}
+.visor-caja figcaption{display:flex;flex-direction:column;gap:3px;text-align:center;color:#fff}
+.visor-caja figcaption strong{font-family:var(--serif);font-size:clamp(17px,4.4vw,21px);font-weight:600}
+.visor-caja figcaption span{font-size:12px;letter-spacing:.12em;text-transform:uppercase;
+  color:rgba(255,255,255,.66)}
+.visor-cerrar{position:absolute;top:-6px;right:-6px;width:38px;height:38px;border-radius:50%;
+  border:1px solid rgba(255,255,255,.22);background:rgba(10,18,24,.8);color:#fff;
+  font-size:22px;line-height:1;display:grid;place-items:center;
+  transition:background .15s,transform .15s}
+.visor-cerrar:hover{background:rgba(30,44,54,.95);transform:rotate(90deg)}
+@media (max-width:520px){
+  .visor-cerrar{top:auto;bottom:-58px;right:auto;left:50%;transform:translateX(-50%)}
+  .visor-cerrar:hover{transform:translateX(-50%) rotate(90deg)}
+}
 </style>
 </head>
 <body>
 
 <!-- ===================== ACCESO ===================== -->
 <div class="acceso" id="acceso">
+  <div class="acceso-encabezado">
+    <span class="mark marca-grande" aria-hidden="true">
+      <img src="/iconos/icono-512.png" alt="" width="512" height="512" decoding="async">
+    </span>
+    <h1>Consultorio Dr. Padilla</h1>
+    <div class="sub">Panel del asistente</div>
+  </div>
   <form class="acceso-caja" id="formAcceso">
-    <div class="acceso-marca">
-      <span class="mark" aria-hidden="true"><img src="/iconos/logo-192.png" alt="" width="192" height="192" decoding="async"></span>
-      <div>
-        <h1>Consultorio Dr. Padilla</h1>
-        <div class="sub">Panel del asistente</div>
-      </div>
-    </div>
     <div class="error oculto" id="errorAcceso"></div>
     <div class="campo">
       <label for="correo">Correo</label>
@@ -786,7 +836,7 @@ html,body{max-width:100%;overflow-x:hidden}
       <span></span><span></span><span></span>
     </button>
     <div class="movil-marca">
-      <span class="mark" aria-hidden="true"><img src="/iconos/logo-192.png" alt="" width="192" height="192" decoding="async"></span>
+      <button class="mark marca-boton" type="button" data-ver-logo aria-label="Ver el logotipo del consultorio"><img src="/iconos/logo-192.png" alt="" width="192" height="192" decoding="async"></button>
       <div>
         <div class="brand-name">Dr. J. G. Padilla</div>
         <div class="brand-sub">Cirugia general</div>
@@ -796,10 +846,25 @@ html,body{max-width:100%;overflow-x:hidden}
   </header>
   <div class="velo oculto" id="veloMenu"></div>
 
+  <!-- Logotipo ampliado. Se abre al tocar la marca en cualquiera de las
+       dos barras y se cierra tocando fuera o con Escape. -->
+  <div class="visor oculto" id="visorLogo" role="dialog" aria-modal="true"
+    aria-label="Logotipo del consultorio">
+    <figure class="visor-caja">
+      <img src="/iconos/icono-512.png" alt="Logotipo del consultorio del Dr. José Guadalupe Padilla"
+        width="512" height="512" decoding="async">
+      <figcaption>
+        <strong>Dr. José Guadalupe Padilla</strong>
+        <span>Cirugía General y Laparoscópica</span>
+      </figcaption>
+      <button class="visor-cerrar" id="cerrarLogo" type="button" aria-label="Cerrar">&times;</button>
+    </figure>
+  </div>
+
 
   <nav class="rail" id="rail">
     <div class="brand">
-      <span class="mark" aria-hidden="true"><img src="/iconos/logo-192.png" alt="" width="192" height="192" decoding="async"></span>
+      <button class="mark marca-boton" type="button" data-ver-logo aria-label="Ver el logotipo del consultorio"><img src="/iconos/logo-192.png" alt="" width="192" height="192" decoding="async"></button>
       <div>
         <div class="brand-name">Dr. J. G. Padilla</div>
         <div class="brand-sub">Cirugía general</div>
@@ -1173,6 +1238,25 @@ html,body{max-width:100%;overflow-x:hidden}
   $("#btnSalir").addEventListener("click", async () => {
     try { await pedir("/logout", { method: "POST" }); } catch (e) {}
     yo = null; mostrarAcceso();
+  });
+
+  /* ---------------- el logotipo ampliado ---------------- */
+
+  const visor = $("#visorLogo");
+
+  function verLogo(mostrar) {
+    visor.classList.toggle("oculto", !mostrar);
+    document.body.classList.toggle("sin-scroll", mostrar);
+    if (mostrar) $("#cerrarLogo").focus();
+  }
+
+  document.querySelectorAll("[data-ver-logo]").forEach(
+    (b) => b.addEventListener("click", () => verLogo(true)));
+  $("#cerrarLogo").addEventListener("click", () => verLogo(false));
+  // Tocar fuera de la figura cierra; tocar la figura, no.
+  visor.addEventListener("click", (e) => { if (e.target === visor) verLogo(false); });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !visor.classList.contains("oculto")) verLogo(false);
   });
 
   /* ---------------- el cajon del celular ---------------- */
