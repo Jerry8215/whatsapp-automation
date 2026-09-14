@@ -165,12 +165,16 @@ async def _procesar(entrante: MensajeEntrante) -> None:
             _actualizar_paciente(paciente.id, fuente=fuente)
 
     # --- 5. escalado -----------------------------------------------------
+    # El modo se resuelve acá y no en el paso 6 porque el escalado necesita
+    # saberlo: con IA, «no se entendió» deja de ser motivo para derivar.
+    modo = _modo()
     decision = escalation.decidir(
         veredicto=veredicto,
         clasificacion=clasificacion,
         texto=entrante.texto,
         intentos_fallidos=conversacion.intentos_fallidos,
         abierta_en=conversacion.abierta_en,
+        ia_disponible=modo is not ModoAsistente.BASICO and ai.disponible(),
     )
 
     if decision.escalar:
@@ -201,7 +205,6 @@ async def _procesar(entrante: MensajeEntrante) -> None:
         return
 
     # --- 6. ¿quién contesta? ----------------------------------------------
-    modo = _modo()
     if _conviene_la_ia(modo, clasificacion, conversacion):
         if await _conversar_con_ia(entrante, paciente, conversacion, abierto,
                                    clasificacion.intencion):

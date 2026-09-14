@@ -89,10 +89,21 @@ def decidir(
     intentos_fallidos: int,
     abierta_en: datetime,
     ahora: datetime | None = None,
+    ia_disponible: bool = False,
 ) -> Decision:
     """
     Se llama con cada mensaje del paciente, después de la barrera clínica
     y de la clasificación de intención.
+
+    `ia_disponible` cambia qué significa «no se le entendió». Las reglas 5 y
+    6 existen porque, sin IA, un mensaje que las reglas no reconocen no
+    tiene quién lo conteste. Con IA sí lo tiene: es justamente el mensaje
+    para el que se la conectó. Derivarlo antes de dejarla intentar es lo que
+    pasó en la primera prueba real del consultorio —«¿hace descuentos?»,
+    «¿realiza lipomas?», «¿en qué consiste la cirugía?» terminaron todos en
+    «la comunico con el equipo» y la IA nunca los vio—. Si la IA tampoco
+    puede, el router deriva igual en el paso 8, y la IA misma puede pedir
+    una persona cuando lo considera necesario.
     """
     ahora = ahora or datetime.utcnow()
     t = normalizar(texto)
@@ -151,6 +162,9 @@ def decidir(
         clasificacion.intencion is Intencion.DESCONOCIDA
         or not clasificacion.es_confiable
     )
+    if ia_disponible:
+        sin_entender = False
+
     if sin_entender and intentos_fallidos + 1 >= INTENTOS_ANTES_DE_DERIVAR:
         return Decision(
             escalar=True,

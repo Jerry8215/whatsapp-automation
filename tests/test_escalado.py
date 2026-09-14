@@ -165,3 +165,58 @@ async def test_el_precio_no_se_repite_si_es_el_mismo_en_todas_las_sedes(telefono
     from tests.test_pipeline import respuestas
     texto = " ".join(respuestas(telefono))
     assert texto.count("900") == 1, "Repitió el mismo precio una vez por sede"
+
+
+# ----------------------------------------------------------------------
+#  Con IA, «no se entendió» no es motivo para derivar
+# ----------------------------------------------------------------------
+
+def _decidir_sin_entender(**extra):
+    from datetime import datetime, timedelta
+
+    from app.brain import escalation, safety
+
+    return escalation.decidir(
+        veredicto=safety.evaluar("Hace descuentos?", None),
+        clasificacion=clasificar("Hace descuentos?"),
+        texto="Hace descuentos?",
+        intentos_fallidos=1,
+        abierta_en=datetime.utcnow() - timedelta(minutes=30),
+        **extra,
+    )
+
+
+def test_sin_ia_lo_que_no_se_entiende_se_deriva():
+    assert _decidir_sin_entender().escalar
+
+
+def test_con_ia_lo_que_no_se_entiende_lo_intenta_ella():
+    assert not _decidir_sin_entender(ia_disponible=True).escalar
+
+
+def test_con_ia_lo_que_si_importa_se_sigue_derivando():
+    from datetime import datetime
+
+    from app.brain import escalation, safety
+
+    texto = "Tengo un dolor muy fuerte y fiebre alta"
+    d = escalation.decidir(
+        veredicto=safety.evaluar(texto, None),
+        clasificacion=clasificar(texto),
+        texto=texto,
+        intentos_fallidos=0,
+        abierta_en=datetime.utcnow(),
+        ia_disponible=True,
+    )
+    assert d.escalar and d.urgente
+
+
+@pytest.mark.parametrize("mensaje", [
+    "Necesito una cita",
+    "Quisiera una consulta",
+    "¿Me da una cita por favor?",
+])
+def test_pedir_una_cita_sin_decir_agendar_es_una_cita(mensaje):
+    c = clasificar(mensaje)
+    assert c.intencion is Intencion.CITA
+    assert c.es_confiable

@@ -544,3 +544,64 @@ async def test_con_el_tope_alcanzado_no_se_llama_a_openai(
 
     assert openai_falso["peticiones"] == []
     assert enviados, "el paciente se quedó sin respuesta"
+
+
+# ======================================================================
+#  La IA entra antes de derivar
+# ======================================================================
+
+def _envejecer(telefono, minutos):
+    """Hace que la conversación parezca abierta hace un rato."""
+    with sesion() as s:
+        c = s.get(Conversacion, _conversacion(telefono).id)
+        c.abierta_en = datetime.utcnow() - timedelta(minutes=minutos)
+        s.add(c)
+        s.commit()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("pregunta", [
+    "Hace descuentos?",
+    "Realiza lipomas?",
+    "En qué consiste la cirugía de vesícula",
+    "Atiende urgencias?",
+])
+async def test_con_ia_una_pregunta_imprevista_no_se_deriva_por_tiempo(
+    openai_falso, modo_ia, enviados, telefono, pregunta
+):
+    """
+    La primera prueba real del consultorio.
+
+    El doctor saludó, siguió preguntando un rato, y a partir de los diez
+    minutos todo lo que las reglas no reconocían terminó en «la comunico
+    con el equipo del consultorio». La regla de conversación estancada
+    corría antes que la IA, así que la IA nunca vio esas preguntas: eran
+    justamente las que se la conectó para contestar.
+    """
+    await _hablar(telefono, "Hola", wa_id="wamid.tiempo.1")
+    _envejecer(telefono, 30)
+
+    openai_falso["guion"] = [_mensaje("Con gusto le explico.")]
+    await _hablar(telefono, pregunta, wa_id="wamid.tiempo.2")
+
+    assert openai_falso["peticiones"], "la pregunta no llegó a la IA"
+    assert enviados[-1] == "Con gusto le explico."
+    c = _conversacion(telefono)
+    assert c.estado is EstadoConversacion.BOT
+    assert c.motivo_escalado is None
+
+
+@pytest.mark.asyncio
+async def test_si_la_ia_no_puede_se_deriva_igual(
+    openai_falso, modo_ia, enviados, telefono
+):
+    """
+    Ceder el paso a la IA no puede dejar al paciente sin nadie: si OpenAI
+    falla, lo que no se entiende sigue llegando a una persona.
+    """
+    openai_falso["explota"] = True
+
+    await _hablar(telefono, "zzz qqq xyz", wa_id="wamid.cae.1")
+    await _hablar(telefono, "wwww vvvv uuuu", wa_id="wamid.cae.2")
+
+    assert _conversacion(telefono).estado is EstadoConversacion.REQUIERE_ATENCION

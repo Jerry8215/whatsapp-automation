@@ -37,6 +37,7 @@ SENALES: dict[Intencion, list[tuple[str, float]]] = {
     Intencion.CITA: [
         (r"\b(?:quiero|quisiera|necesito|me gustaria|puedo) (?:agendar|sacar|hacer|programar|pedir)\b", 1.0),
         (r"\bagendar (?:una )?(?:cita|consulta|valoracion)\b", 1.0),
+        (r"\b(?:quiero|quisiera|necesito|ocupo|busco|me gustaria|me (?:da|puede dar|podria dar)) (?:una |un )?(?:cita|consulta|valoracion)\b", 1.0),
         (r"\b(?:tiene|tienen|hay) (?:algun )?(?:espacio|lugar|cupo|disponibilidad)\b", 0.9),
         (r"\bpara cuando (?:hay|tiene|tienen)\b", 0.8),
         (r"\b(?:cita|consulta|valoracion)\b", 0.5),
