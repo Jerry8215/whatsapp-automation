@@ -41,7 +41,30 @@ def _cabeceras() -> dict[str, str]:
     }
 
 
+def destinatario(telefono: str) -> str:
+    """
+    El número tal como lo acepta Meta para ENVIAR.
+
+    México tiene una trampa: el webhook entrega los celulares mexicanos con
+    el viejo prefijo de móvil, `521` más diez dígitos, pero México eliminó
+    ese «1» en 2020 y Meta espera `52` más diez dígitos para mandar. Si se
+    responde al mismo número que llegó, Meta lo rechaza con el error 131030
+    («número no incluido en la lista de autorizados») y el paciente no
+    recibe respuesta. Pasó en la primera prueba real del consultorio.
+
+    Se corrige solo al enviar. El paciente se sigue guardando con el número
+    tal como llegó, porque es con ese que Meta lo vuelve a identificar en el
+    próximo mensaje: cambiarlo en la base partiría su historial en dos.
+    """
+    digitos = "".join(c for c in str(telefono) if c.isdigit())
+    if len(digitos) == 13 and digitos.startswith("521"):
+        return "52" + digitos[3:]
+    return digitos or str(telefono)
+
+
 async def _publicar(carga: dict[str, Any]) -> dict[str, Any]:
+    if "to" in carga:
+        carga = {**carga, "to": destinatario(carga["to"])}
     if not config.wa_token or not config.wa_phone_number_id:
         log.warning("WhatsApp sin configurar; mensaje no enviado: %s", carga)
         return {"simulado": True}

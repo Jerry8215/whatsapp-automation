@@ -105,11 +105,14 @@ def test_la_asistente_puede_registrarla(asistente, sede_id):
     """
     Es su tarea diaria, así que no se le exige ser administradora.
     """
+    # `forzar` porque esta prueba no mide la detección de choques: otra
+    # prueba puede haber dejado una cita a esa misma hora y el 409 la haría
+    # fallar por un motivo ajeno a lo que se está verificando.
     r = asistente.post("/panel/api/citas", json={
         "telefono": "5213391112233", "nombre": "Ana López Registro",
-        "sede_id": sede_id, "inicio": _cuando(),
+        "sede_id": sede_id, "inicio": _cuando(), "forzar": True,
     })
-    assert r.status_code == 200
+    assert r.status_code == 200, r.text
 
     cita = _ultima_cita()
     assert cita is not None
