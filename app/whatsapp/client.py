@@ -15,6 +15,8 @@ repetida afecta la calificación de calidad del número.
 from __future__ import annotations
 
 import logging
+from contextlib import contextmanager
+from contextvars import ContextVar
 from typing import Any
 
 import httpx
@@ -28,6 +30,34 @@ TIEMPO_ESPERA = 20.0
 
 class ErrorWhatsApp(RuntimeError):
     pass
+
+
+#: Encendido mientras atiende el simulador. Ver `simulacion`.
+_simulando: ContextVar[bool] = ContextVar("simulando", default=False)
+
+
+@contextmanager
+def simulacion():
+    """
+    Nada de lo que se envíe dentro de este bloque sale hacia Meta.
+
+    El simulador pasa el mensaje por el circuito real, y en producción el
+    circuito real tiene credenciales de WhatsApp: cada respuesta intentaba
+    salir de verdad hacia el número de prueba, que no existe. Meta la
+    rechazaba, el envío fallaba antes de guardarse y el simulador mostraba
+    la pregunta sin respuesta —justo cuando el consultorio lo usaba para
+    probar la IA—. Además, cada uno de esos rechazos queda a nombre del
+    número del consultorio ante Meta.
+
+    Es una variable de contexto y no un ajuste global a propósito: mientras
+    alguien usa el simulador, los pacientes reales que escriben al mismo
+    tiempo tienen que seguir recibiendo sus respuestas.
+    """
+    marca = _simulando.set(True)
+    try:
+        yield
+    finally:
+        _simulando.reset(marca)
 
 
 def _url() -> str:
@@ -65,6 +95,8 @@ def destinatario(telefono: str) -> str:
 async def _publicar(carga: dict[str, Any]) -> dict[str, Any]:
     if "to" in carga:
         carga = {**carga, "to": destinatario(carga["to"])}
+    if _simulando.get():
+        return {"simulado": True}
     if not config.wa_token or not config.wa_phone_number_id:
         log.warning("WhatsApp sin configurar; mensaje no enviado: %s", carga)
         return {"simulado": True}

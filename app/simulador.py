@@ -70,15 +70,18 @@ async def enviar(
 
     ultimo = _ultimo_id(telefono)
 
-    await procesar_mensaje(MensajeEntrante(
-        wa_message_id=f"sim.{uuid.uuid4().hex[:12]}",
-        telefono=telefono,
-        nombre_perfil=nombre,
-        texto=texto,
-        tipo="button" if boton else ("image" if adjunto else "text"),
-        tipo_adjunto=adjunto,
-        respuesta_id=boton,
-    ))
+    from app.whatsapp.client import simulacion
+
+    with simulacion():
+        await procesar_mensaje(MensajeEntrante(
+            wa_message_id=f"sim.{uuid.uuid4().hex[:12]}",
+            telefono=telefono,
+            nombre_perfil=nombre,
+            texto=texto,
+            tipo="button" if boton else ("image" if adjunto else "text"),
+            tipo_adjunto=adjunto,
+            respuesta_id=boton,
+        ))
 
     return {"mensajes": _nuevos(telefono, ultimo), "estado": _estado(telefono)}
 
