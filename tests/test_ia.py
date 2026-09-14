@@ -605,3 +605,23 @@ async def test_si_la_ia_no_puede_se_deriva_igual(
     await _hablar(telefono, "wwww vvvv uuuu", wa_id="wamid.cae.2")
 
     assert _conversacion(telefono).estado is EstadoConversacion.REQUIERE_ATENCION
+
+
+@pytest.mark.asyncio
+async def test_el_prompt_prohibe_inventar_servicios_y_anunciar_sin_hacer(
+    openai_falso, modo_ia, enviados, telefono
+):
+    """
+    Dos cosas que hizo el modelo en producción: afirmar que el doctor «no
+    atiende urgencias», que no figura en ningún lado, y contestar «permítame
+    consultar la disponibilidad» sin consultarla, dejando al paciente
+    esperando una respuesta que nunca llegó.
+    """
+    openai_falso["guion"] = [_mensaje("Con gusto.")]
+
+    await _hablar(telefono, "una pregunta suelta")
+
+    sistema = openai_falso["peticiones"][0]["messages"][0]["content"]
+    assert "si atiende urgencias" in sistema
+    assert "no lo afirmes ni lo niegues" in sistema
+    assert "Nunca anuncies que vas a hacer algo" in sistema

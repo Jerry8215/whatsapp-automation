@@ -136,9 +136,19 @@ async def salud() -> JSONResponse:
     # clave el asistente sigue contestando, pero solo con los flujos, y
     # desde afuera parece que funciona bien. Se ve acá y en el panel.
     configurada = bool(config.openai_api_key)
+
+    # Lo que manda es lo que eligió el consultorio en el panel; la variable
+    # de entorno es solo el valor inicial. Leer solo la variable hacía que
+    # esta página dijera «hibrido» mientras el panel estaba en «ia».
+    from app.db import sesion
+    from app.models import Ajuste
+
+    with sesion() as s:
+        ajuste = s.get(Ajuste, "modo_asistente")
+    configurado = ajuste.valor if ajuste else config.modo_asistente
     efectivo = (
         "basico" if (tope_alcanzado() or not configurada)
-        else config.modo_asistente
+        else configurado
     )
 
     return JSONResponse({
@@ -146,7 +156,7 @@ async def salud() -> JSONResponse:
         "entorno": config.entorno,
         "agenda": config.agenda_proveedor,
         "modo": efectivo,
-        "modo_configurado": config.modo_asistente,
+        "modo_configurado": configurado,
         "ia": {
             "configurada": configurada,
             "modelo": config.openai_model if configurada else "",

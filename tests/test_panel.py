@@ -336,3 +336,19 @@ def test_la_raiz_lleva_al_panel(cliente):
     r = cliente.get("/", follow_redirects=False)
     assert r.status_code in (307, 302)
     assert r.headers["location"] == "/panel"
+
+
+
+def test_salud_informa_el_modo_elegido_en_el_panel(doctor, monkeypatch):
+    """
+    La página de estado decía «hibrido» con el panel en «ia»: miraba solo la
+    variable de entorno y no lo que eligió el consultorio.
+    """
+    monkeypatch.setattr("app.config.config.openai_api_key", "sk-de-prueba", raising=False)
+    doctor.put("/panel/api/modo", json={"modo": "ia"})
+    try:
+        d = doctor.get("/salud").json()
+        assert d["modo_configurado"] == "ia"
+        assert d["modo"] == "ia"
+    finally:
+        doctor.put("/panel/api/modo", json={"modo": "hibrido"})
